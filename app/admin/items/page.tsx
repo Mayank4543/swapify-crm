@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
+import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '@/components/ui/pagination';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Package, Search, Filter, Download, Eye, Edit, Trash2, MapPin, Tag, DollarSign, User, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -54,6 +56,7 @@ interface Seller {
 
 export default function ItemListPage() {
     const { user: currentUser } = useAuth();
+    const router = useRouter();
     const [listings, setListings] = useState<Listing[]>([]);
     const [sellers, setSellers] = useState<{ [key: string]: Seller }>({});
     const [loading, setLoading] = useState(true);
@@ -62,6 +65,7 @@ export default function ItemListPage() {
     const [statusFilter, setStatusFilter] = useState('all');
     const [includeDeleted, setIncludeDeleted] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
+    const [navigatingToItemId, setNavigatingToItemId] = useState<string | null>(null);
 
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
@@ -247,6 +251,11 @@ export default function ItemListPage() {
     const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
         const img = e.target as HTMLImageElement;
         img.src = '/placeholder.jpg'; // Fallback to local placeholder
+    };
+
+    const handleViewItem = (listingId: string) => {
+        setNavigatingToItemId(listingId);
+        router.push(`/admin/items/${listingId}`);
     };
 
     const getStatusColor = (status: string | undefined) => {
@@ -533,12 +542,12 @@ export default function ItemListPage() {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => {
-                                                        // View listing details logic here
-                                                        toast.info(`Viewing ${listing.title}`);
-                                                    }}
+                                                    onClick={() => handleViewItem(listing._id)}
+                                                    disabled={navigatingToItemId === listing._id}
                                                 >
-                                                    <Eye className="h-4 w-4" />
+                                                   
+                                                        <Eye className="h-4 w-4" />
+                                                   
                                                 </Button>
 
                                                 {!listing.deleted && (
