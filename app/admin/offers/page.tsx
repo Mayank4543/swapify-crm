@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from 'sonner'
 import { Trash2, Edit, Phone, Mail, Eye, ChevronLeft, ChevronRight, Handshake } from 'lucide-react'
 import Image from 'next/image'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface User {
     _id: string;
@@ -58,6 +59,8 @@ export default function OffersPage() {
     const router = useRouter()
     const [offers, setOffers] = useState<Offer[]>([])
     const [searchTerm, setSearchTerm] = useState('')
+    const [isLoading, setIsLoading] = useState(true)
+    const [navigatingToOfferId, setNavigatingToOfferId] = useState<string | null>(null)
     const [pagination, setPagination] = useState<PaginationInfo>({
         page: 1,
         limit: 10,
@@ -72,6 +75,7 @@ export default function OffersPage() {
 
     const loadOffers = async () => {
         try {
+            setIsLoading(true)
             const params = new URLSearchParams({
                 page: pagination.page.toString(),
                 limit: pagination.limit.toString(),
@@ -96,12 +100,14 @@ export default function OffersPage() {
         } catch (error) {
             toast.error('Failed to load offers')
             console.error('Load offers error:', error)
+        } finally {
+            setIsLoading(false)
         }
     }
 
     const handleStatusUpdate = async (offerId: string, newStatus: string) => {
         try {
-            const response = await fetch('/api/admin/offers-simple', {
+            const response = await fetch('/api/admin/offers', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -113,8 +119,15 @@ export default function OffersPage() {
                 toast.success('Offer status updated successfully')
                 loadOffers()
             } else {
-                const errorData = await response.json()
-                toast.error(errorData.error || 'Failed to update offer status')
+                let errorMessage = 'Failed to update offer status'
+                try {
+                    const errorData = await response.json()
+                    errorMessage = errorData.error || errorMessage
+                } catch (parseError) {
+                    console.error('Error parsing response:', parseError)
+                    errorMessage = `Server error (${response.status})`
+                }
+                toast.error(errorMessage)
             }
         } catch (error) {
             toast.error('Failed to update offer status')
@@ -129,7 +142,7 @@ export default function OffersPage() {
         }
 
         try {
-            const response = await fetch('/api/admin/offers-simple', {
+            const response = await fetch('/api/admin/offers', {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
@@ -198,6 +211,7 @@ export default function OffersPage() {
     }
 
     const handleViewOffer = (offerId: string) => {
+        setNavigatingToOfferId(offerId)
         router.push(`/admin/offers/${offerId}`)
     }
 
@@ -252,7 +266,16 @@ export default function OffersPage() {
             {/* Offers Table */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Offers ({pagination.total})</CardTitle>
+                    <CardTitle>
+                        {isLoading ? (
+                            <div className="flex items-center gap-2">
+                                <Skeleton className="h-5 w-5 rounded" />
+                                <Skeleton className="h-6 w-32" />
+                            </div>
+                        ) : (
+                            `Offers (${pagination.total})`
+                        )}
+                    </CardTitle>
                     <CardDescription>
                         All offers made by buyers on various listings
                     </CardDescription>
@@ -274,7 +297,50 @@ export default function OffersPage() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {offers.length === 0 ? (
+                                {isLoading ? (
+                                    // Loading skeleton rows
+                                    Array.from({ length: 5 }).map((_, index) => (
+                                        <TableRow key={index}>
+                                            <TableCell>
+                                                <div className="flex items-center space-x-3">
+                                                    <Skeleton className="h-12 w-12 rounded" />
+                                                    <div className="space-y-2">
+                                                        <Skeleton className="h-4 w-32" />
+                                                        <Skeleton className="h-3 w-20" />
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="space-y-2">
+                                                    <Skeleton className="h-4 w-24" />
+                                                    <Skeleton className="h-3 w-32" />
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="space-y-2">
+                                                    <Skeleton className="h-4 w-24" />
+                                                    <Skeleton className="h-3 w-32" />
+                                                </div>
+                                            </TableCell>
+                                            <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                                            <TableCell>
+                                                <div className="space-y-2">
+                                                    <Skeleton className="h-4 w-24" />
+                                                    <Skeleton className="h-3 w-28" />
+                                                </div>
+                                            </TableCell>
+                                            <TableCell><Skeleton className="h-6 w-16 rounded-full" /></TableCell>
+                                            <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                                            <TableCell>
+                                                <div className="flex space-x-1">
+                                                    <Skeleton className="h-8 w-8 rounded" />
+                                                    <Skeleton className="h-8 w-8 rounded" />
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                ) : offers.length === 0 ? (
                                     <TableRow>
                                         <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
                                             No offers found
@@ -361,8 +427,13 @@ export default function OffersPage() {
                                                         variant="ghost"
                                                         size="sm"
                                                         onClick={() => handleViewOffer(offer._id)}
+                                                        disabled={navigatingToOfferId === offer._id}
                                                     >
-                                                        <Eye className="h-4 w-4" />
+                                                        {navigatingToOfferId === offer._id ? (
+                                                            <div className="animate-spin h-4 w-4 border-2 border-current border-t-transparent rounded-full" />
+                                                        ) : (
+                                                            <Eye className="h-4 w-4" />
+                                                        )}
                                                     </Button>
 
                                                     {user?.role === 'manager' && (
@@ -401,7 +472,15 @@ export default function OffersPage() {
                     </div>
 
                     {/* Pagination */}
-                    {pagination.pages > 1 && (
+                    {isLoading ? (
+                        <div className="flex items-center justify-between mt-4">
+                            <Skeleton className="h-4 w-48" />
+                            <div className="flex space-x-2">
+                                <Skeleton className="h-9 w-20" />
+                                <Skeleton className="h-9 w-16" />
+                            </div>
+                        </div>
+                    ) : pagination.pages > 1 && (
                         <div className="flex items-center justify-between mt-4">
                             <div className="text-sm text-muted-foreground">
                                 Showing {((pagination.page - 1) * pagination.limit) + 1} to{' '}

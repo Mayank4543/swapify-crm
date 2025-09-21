@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { toast } from 'sonner'
 import { ArrowLeft, Phone, Mail, Edit, Trash2, Handshake, MapPin, Calendar, IndianRupee } from 'lucide-react'
 import Image from 'next/image'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface User {
     _id: string;
@@ -53,6 +54,7 @@ export default function OfferDetailsPage() {
     const offerId = params.id as string
 
     const [offer, setOffer] = useState<Offer | null>(null)
+    const [isLoading, setIsLoading] = useState(true)
     const [isUpdating, setIsUpdating] = useState(false)
 
     useEffect(() => {
@@ -63,6 +65,7 @@ export default function OfferDetailsPage() {
 
     const loadOfferDetails = async () => {
         try {
+            setIsLoading(true)
             const response = await fetch(`/api/admin/offers/${offerId}`)
             if (response.ok) {
                 const data = await response.json()
@@ -75,6 +78,8 @@ export default function OfferDetailsPage() {
             toast.error('Failed to load offer details')
             console.error('Load offer details error:', error)
             router.push('/admin/offers')
+        } finally {
+            setIsLoading(false)
         }
     }
 
@@ -176,10 +181,159 @@ export default function OfferDetailsPage() {
         return getImageUrl(imageToUse)
     }
 
-    if (!offer) {
+    if (isLoading || !offer) {
         return (
-            <div className="text-center py-12">
-                <h1 className="text-2xl font-bold text-muted-foreground">Loading...</h1>
+            <div className="space-y-6">
+                {/* Header Skeleton */}
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                        <Skeleton className="h-10 w-32" />
+                        <div>
+                            <Skeleton className="h-8 w-48 mb-2" />
+                            <Skeleton className="h-4 w-64" />
+                        </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <Skeleton className="h-6 w-16 rounded-full" />
+                        <Skeleton className="h-9 w-20" />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Main Content Skeleton */}
+                    <div className="lg:col-span-2 space-y-6">
+                        {/* Listing Information Skeleton */}
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center gap-2">
+                                    <Skeleton className="h-5 w-5" />
+                                    <Skeleton className="h-6 w-40" />
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex space-x-4">
+                                    <Skeleton className="h-32 w-32 rounded-lg" />
+                                    <div className="flex-1 space-y-3">
+                                        <div>
+                                            <Skeleton className="h-6 w-48 mb-2" />
+                                            <Skeleton className="h-4 w-32" />
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <Skeleton className="h-4 w-24 mb-1" />
+                                                <Skeleton className="h-6 w-32" />
+                                            </div>
+                                            <div>
+                                                <Skeleton className="h-4 w-24 mb-1" />
+                                                <Skeleton className="h-6 w-32" />
+                                            </div>
+                                        </div>
+                                        <Skeleton className="h-4 w-full" />
+                                        <Skeleton className="h-16 w-full" />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Buyer Information Skeleton */}
+                        <Card>
+                            <CardHeader>
+                                <Skeleton className="h-6 w-36" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {Array.from({ length: 4 }).map((_, i) => (
+                                        <div key={i}>
+                                            <Skeleton className="h-4 w-20 mb-1" />
+                                            <Skeleton className="h-5 w-32" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Seller Information Skeleton */}
+                        <Card>
+                            <CardHeader>
+                                <Skeleton className="h-6 w-36" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {Array.from({ length: 4 }).map((_, i) => (
+                                        <div key={i}>
+                                            <Skeleton className="h-4 w-20 mb-1" />
+                                            <Skeleton className="h-5 w-32" />
+                                        </div>
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Message Skeleton */}
+                        <Card>
+                            <CardHeader>
+                                <Skeleton className="h-6 w-32" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="bg-gray-50 p-4 rounded-lg">
+                                    <Skeleton className="h-4 w-full mb-2" />
+                                    <Skeleton className="h-4 w-3/4 mb-2" />
+                                    <Skeleton className="h-4 w-1/2" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Sidebar Skeleton */}
+                    <div className="space-y-6">
+                        {/* Status Management Skeleton */}
+                        <Card>
+                            <CardHeader>
+                                <Skeleton className="h-6 w-32 mb-2" />
+                                <Skeleton className="h-4 w-40" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton className="h-4 w-24 mb-2" />
+                                <Skeleton className="h-10 w-full" />
+                            </CardContent>
+                        </Card>
+
+                        {/* Contact Information Skeleton */}
+                        <Card>
+                            <CardHeader>
+                                <Skeleton className="h-6 w-40 mb-2" />
+                                <Skeleton className="h-4 w-36" />
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <div>
+                                    <Skeleton className="h-4 w-24 mb-1" />
+                                    <Skeleton className="h-5 w-32" />
+                                </div>
+                                <div>
+                                    <Skeleton className="h-4 w-28 mb-1" />
+                                    <Skeleton className="h-5 w-36" />
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Timeline Skeleton */}
+                        <Card>
+                            <CardHeader>
+                                <Skeleton className="h-6 w-20" />
+                            </CardHeader>
+                            <CardContent className="space-y-3">
+                                <div>
+                                    <Skeleton className="h-4 w-16 mb-1" />
+                                    <Skeleton className="h-4 w-40" />
+                                </div>
+                                <div>
+                                    <Skeleton className="h-4 w-24 mb-1" />
+                                    <Skeleton className="h-4 w-40" />
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
             </div>
         )
     }
