@@ -17,6 +17,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 interface Admin {
     _id: string;
     username: string;
+    email: string;
+    full_name?: string;
     role: string;
 }
 
@@ -26,7 +28,7 @@ export default function AdminManagementPage() {
     const [isLoading, setIsLoading] = useState(true);
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [deleteAdmin, setDeleteAdmin] = useState<Admin | null>(null);
-    const [formData, setFormData] = useState({ username: '', password: '' });
+    const [formData, setFormData] = useState({ username: '', password: '', email: '', full_name: '' });
     const [formError, setFormError] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -79,7 +81,7 @@ export default function AdminManagementPage() {
             if (response.ok) {
                 toast.success('Admin created successfully');
                 setIsCreateDialogOpen(false);
-                setFormData({ username: '', password: '' });
+                setFormData({ username: '', password: '', email: '', full_name: '' });
                 loadAdmins();
             } else {
                 setFormError(data.error || 'Failed to create admin');
@@ -173,6 +175,31 @@ export default function AdminManagementPage() {
                                     onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                                     required
                                     placeholder="Enter admin username"
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="create-email">Email</Label>
+                                <Input
+                                    id="create-email"
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    required
+                                    placeholder="Enter admin email"
+                                    disabled={isSubmitting}
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="create-full-name">Full Name</Label>
+                                <Input
+                                    id="create-full-name"
+                                    type="text"
+                                    value={formData.full_name}
+                                    onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                                    placeholder="Enter admin full name (optional)"
                                     disabled={isSubmitting}
                                 />
                             </div>

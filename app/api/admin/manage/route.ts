@@ -7,7 +7,11 @@ import Admin from '@/lib/models/Admin';
 // Force this API route to use Node.js runtime
 export const runtime = 'nodejs';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
+const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-secret';
+
+if (!process.env.JWT_SECRET && !process.env.NEXTAUTH_SECRET) {
+    console.warn('Warning: Neither JWT_SECRET nor NEXTAUTH_SECRET environment variable is set');
+}
 
 // Middleware to verify manager role
 async function verifyManager(request: NextRequest) {
@@ -47,7 +51,7 @@ export async function GET(request: NextRequest) {
     } catch (error) {
         console.error('Get admins error:', error);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }
@@ -65,20 +69,22 @@ export async function POST(request: NextRequest) {
         }
 
         await dbConnect();
-        const { username, password } = await request.json();
+        const { username, password, email, full_name } = await request.json();
 
-        if (!username || !password) {
+        if (!username || !password || !email) {
             return NextResponse.json(
-                { error: 'Username and password are required' },
+                { error: 'Username, password, and email are required' },
                 { status: 400 }
             );
         }
 
         // Check if username already exists
-        const existingAdmin = await Admin.findOne({ username });
+        const existingAdmin = await Admin.findOne({
+            $or: [{ username }, { email }]
+        });
         if (existingAdmin) {
             return NextResponse.json(
-                { error: 'Username already exists' },
+                { error: 'Username or email already exists' },
                 { status: 400 }
             );
         }
@@ -87,7 +93,9 @@ export async function POST(request: NextRequest) {
         const admin = await Admin.create({
             username,
             password: hashedPassword,
-            role: 'admin'
+            role: 'admin',
+            email,
+            full_name: full_name || username
         });
 
         return NextResponse.json({
@@ -95,14 +103,16 @@ export async function POST(request: NextRequest) {
             admin: {
                 id: admin._id,
                 username: admin.username,
-                role: admin.role
+                email: admin.email,
+                role: admin.role,
+                full_name: admin.full_name
             }
         });
 
     } catch (error) {
         console.error('Create admin error:', error);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }
@@ -145,7 +155,7 @@ export async function DELETE(request: NextRequest) {
     } catch (error) {
         console.error('Delete admin error:', error);
         return NextResponse.json(
-            { error: 'Internal server error' },
+            { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
             { status: 500 }
         );
     }

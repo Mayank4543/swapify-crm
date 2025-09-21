@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth-context"
-import { LayoutDashboard, Users, Target, Mail, History, Settings, LogOut, Shield, User, Package } from "lucide-react"
+import { LayoutDashboard, Users, Target, Mail, History, Settings, LogOut, Shield, User, Package, Handshake } from "lucide-react"
 
 const navigation = [
   {
@@ -21,6 +21,11 @@ const navigation = [
     name: "Item List",
     href: "/admin/items",
     icon: Package,
+  },
+  {
+    name: "Offers",
+    href: "/admin/offers",
+    icon: Handshake,
   },
   {
     name: "Segments",
