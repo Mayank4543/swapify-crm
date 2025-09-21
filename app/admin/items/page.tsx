@@ -19,10 +19,11 @@ interface Listing {
     title: string;
     seller_id: string;
     seller_no: string;
+    category_id?: string;
     price: number;
     description: string;
     cover_image: string;
-    additional_images: string[];
+    additional_images?: string[];
     category: string;
     subcategory?: string;
     location_display_name?: string;
@@ -30,10 +31,19 @@ interface Listing {
     state?: string;
     city?: string;
     pincode?: string;
-    deleted: boolean;
-    status: string;
-    currency: string;
+    latitude?: number;
+    longitude?: number;
     created_at: string;
+    deleted: boolean;
+    status: 'draft' | 'pending_review' | 'active' | 'paused' | 'reserved' | 'sold' | 'cancelled' | 'expired' | 'archived';
+    expires_at?: string;
+    currency: 'INR';
+    __v?: number;
+    // GeoJSON location field (might be present in newer records)
+    location?: {
+        type: 'Point';
+        coordinates: [number, number]; // [longitude, latitude]
+    };
 }
 
 interface Seller {
@@ -81,6 +91,8 @@ export default function ItemListPage() {
             const response = await fetch(`/api/listings?${params}`);
             if (response.ok) {
                 const data = await response.json();
+                console.log('Fetched listings data:', data);
+                console.log('First listing:', data.listings[0]);
                 setListings(data.listings);
                 setTotalPages(data.pagination.totalPages);
                 setTotalCount(data.pagination.totalCount);
@@ -183,11 +195,19 @@ export default function ItemListPage() {
         }
     };
 
-    const formatPrice = (price: number, currency: string) => {
-        return new Intl.NumberFormat('en-IN', {
-            style: 'currency',
-            currency: currency,
-        }).format(price);
+    const formatPrice = (price: number, currency?: string) => {
+        // Default to INR if currency is empty or invalid
+        const validCurrency = currency && currency.length === 3 ? currency : 'INR';
+
+        try {
+            return new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: validCurrency,
+            }).format(price);
+        } catch (error) {
+            // Fallback to simple number formatting if currency is invalid
+            return `₹${price.toLocaleString('en-IN')}`;
+        }
     };
 
     const formatDate = (dateString: string) => {
@@ -204,21 +224,55 @@ export default function ItemListPage() {
     };
 
     const getImageUrl = (imageName: string) => {
-        if (!imageName) return '/placeholder.jpg';
-        // Assuming images are stored in uploads/listings directory
-        return `/uploads/listings/${imageName}`;
+        if (!imageName) {
+            console.log('No image name provided');
+            return '/placeholder.jpg';
+        }
+
+        // Use environment variable for image base URL
+        const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'http://phpstack-1409678-5243790.cloudwaysapps.com/uploads';
+
+        // If imageName already contains the full URL, return it as is
+        if (imageName.startsWith('http')) {
+            console.log('Full URL provided:', imageName);
+            return imageName;
+        }
+
+        // If it's just a filename, construct the full URL
+        const fullUrl = `${imageBaseUrl}/${imageName}`;
+        console.log('Constructed URL:', fullUrl, 'from filename:', imageName);
+        return fullUrl;
     };
 
-    const getStatusColor = (status: string) => {
+    const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+        const img = e.target as HTMLImageElement;
+        img.src = '/placeholder.jpg'; // Fallback to local placeholder
+    };
+
+    const getStatusColor = (status: string | undefined) => {
+        if (!status) {
+            return 'bg-gray-100 text-gray-800 border-gray-200';
+        }
+
         switch (status.toLowerCase()) {
             case 'active':
                 return 'bg-green-100 text-green-800 border-green-200';
-            case 'pending':
+            case 'pending_review':
                 return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-            case 'inactive':
+            case 'draft':
                 return 'bg-gray-100 text-gray-800 border-gray-200';
+            case 'paused':
+                return 'bg-orange-100 text-orange-800 border-orange-200';
+            case 'reserved':
+                return 'bg-purple-100 text-purple-800 border-purple-200';
             case 'sold':
                 return 'bg-blue-100 text-blue-800 border-blue-200';
+            case 'cancelled':
+                return 'bg-red-100 text-red-800 border-red-200';
+            case 'expired':
+                return 'bg-red-100 text-red-800 border-red-200';
+            case 'archived':
+                return 'bg-gray-100 text-gray-800 border-gray-200';
             default:
                 return 'bg-gray-100 text-gray-800 border-gray-200';
         }
@@ -314,10 +368,15 @@ export default function ItemListPage() {
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">All Status</SelectItem>
+
+                                            <SelectItem value="pending_review">Pending Review</SelectItem>
                                             <SelectItem value="active">Active</SelectItem>
-                                            <SelectItem value="pending">Pending</SelectItem>
-                                            <SelectItem value="inactive">Inactive</SelectItem>
+                                            <SelectItem value="paused">Paused</SelectItem>
+
                                             <SelectItem value="sold">Sold</SelectItem>
+                                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                                            <SelectItem value="expired">Expired</SelectItem>
+                                            <SelectItem value="archived">Archived</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -388,6 +447,7 @@ export default function ItemListPage() {
                                                         src={getImageUrl(listing.cover_image)}
                                                         alt={listing.title}
                                                         className="object-cover"
+                                                        onError={handleImageError}
                                                     />
                                                     <AvatarFallback className="rounded-md">
                                                         <Package className="h-6 w-6" />
@@ -452,7 +512,7 @@ export default function ItemListPage() {
                                         <TableCell>
                                             <div className="space-y-1">
                                                 <Badge className={`text-xs ${getStatusColor(listing.status)}`}>
-                                                    {listing.status}
+                                                    {listing.status || 'Unknown'}
                                                 </Badge>
                                                 {listing.deleted && (
                                                     <div className="text-xs text-red-500">Deleted</div>
@@ -491,10 +551,14 @@ export default function ItemListPage() {
                                                                 <SelectValue />
                                                             </SelectTrigger>
                                                             <SelectContent>
+
+                                                                <SelectItem value="pending_review">Pending Review</SelectItem>
                                                                 <SelectItem value="active">Active</SelectItem>
-                                                                <SelectItem value="pending">Pending</SelectItem>
-                                                                <SelectItem value="inactive">Inactive</SelectItem>
+                                                                <SelectItem value="paused">Paused</SelectItem>
                                                                 <SelectItem value="sold">Sold</SelectItem>
+
+                                                                <SelectItem value="expired">Expired</SelectItem>
+
                                                             </SelectContent>
                                                         </Select>
 
