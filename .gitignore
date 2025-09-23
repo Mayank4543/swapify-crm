@@ -19,6 +19,10 @@ yarn-error.log*
 # env files
 .env*
 
+# scripts and manager files (sensitive/development only)
+/scripts/
+create-manager.js
+
 # vercel
 .vercel
 
