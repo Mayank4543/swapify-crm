@@ -362,17 +362,17 @@ export default function ItemListPage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-foreground">Item List</h1>
+                    <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Item List</h1>
                     <p className="text-muted-foreground">Manage all marketplace listings and items</p>
                 </div>
-                <div className="flex items-center space-x-2">
-                    <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                    <Button variant="outline" onClick={() => setShowFilters(!showFilters)} className="w-full sm:w-auto">
                         <Filter className="mr-2 h-4 w-4" />
                         Filters
                     </Button>
-                    <Button variant="outline">
+                    <Button variant="outline" className="w-full sm:w-auto">
                         <Download className="mr-2 h-4 w-4" />
                         Export
                     </Button>
@@ -381,12 +381,12 @@ export default function ItemListPage() {
 
             <Card>
                 <CardHeader>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                         <div>
                             <CardTitle>Listing Management</CardTitle>
                             <CardDescription>View and manage all marketplace listings</CardDescription>
                         </div>
-                        <div className="w-80">
+                        <div className="w-full lg:w-80">
                             <Input
                                 placeholder="Search listings..."
                                 value={searchTerm}
@@ -398,7 +398,7 @@ export default function ItemListPage() {
                     {/* Filters Section */}
                     <Collapsible open={showFilters} onOpenChange={setShowFilters}>
                         <CollapsibleContent className="space-y-4 pt-4">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                                 {/* Category Filter */}
                                 <div className="space-y-2">
                                     <label className="text-sm font-medium">Category</label>
@@ -474,184 +474,310 @@ export default function ItemListPage() {
                     </Collapsible>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Item</TableHead>
-                                <TableHead>Seller</TableHead>
-                                <TableHead>Price</TableHead>
-                                <TableHead>Category</TableHead>
-                                <TableHead>Location</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Date</TableHead>
-                                <TableHead>Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {listings.length === 0 ? (
-                                <TableRow>
-                                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                                        No listings found
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                listings.map((listing) => (
-                                    <TableRow key={listing._id} className={listing.deleted ? "opacity-50" : ""}>
-                                        {/* Item Column - Image + Title */}
-                                        <TableCell className="font-medium">
-                                            <div className="flex items-center space-x-3">
-                                                <Avatar className="h-12 w-12 rounded-md">
-                                                    <AvatarImage
-                                                        src={getImageUrl(listing.cover_image)}
-                                                        alt={listing.title}
-                                                        className="object-cover"
-                                                        onError={handleImageError}
-                                                    />
-                                                    <AvatarFallback className="rounded-md">
-                                                        <Package className="h-6 w-6" />
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div className="min-w-0">
-                                                    <div className="font-medium text-sm truncate max-w-[200px]" title={listing.title}>
-                                                        {listing.title}
+                    {/* Mobile view - Card layout */}
+                    <div className="block lg:hidden space-y-4">
+                        {listings.length === 0 ? (
+                            <div className="text-center py-8 text-muted-foreground">
+                                No listings found
+                            </div>
+                        ) : (
+                            listings.map((listing) => (
+                                <Card key={listing._id} className={listing.deleted ? "opacity-50" : ""}>
+                                    <CardContent className="p-4">
+                                        <div className="flex items-start space-x-3">
+                                            <Avatar className="h-16 w-16 rounded-md">
+                                                <AvatarImage
+                                                    src={getImageUrl(listing.cover_image)}
+                                                    alt={listing.title}
+                                                    className="object-cover"
+                                                    onError={handleImageError}
+                                                />
+                                                <AvatarFallback className="rounded-md">
+                                                    <Package className="h-8 w-8" />
+                                                </AvatarFallback>
+                                            </Avatar>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-start justify-between">
+                                                    <div className="min-w-0 flex-1">
+                                                        <h3 className="font-medium text-sm truncate" title={listing.title}>
+                                                            {listing.title}
+                                                        </h3>
+                                                        <p className="text-xs text-muted-foreground">
+                                                            ID: {listing._id.slice(-8)}
+                                                        </p>
                                                     </div>
-                                                    <div className="text-xs text-muted-foreground">
-                                                        ID: {listing._id}
+                                                    <Badge className={`text-xs ${getStatusColor(listing.status)} ml-2`}>
+                                                        {listing.status || 'Unknown'}
+                                                    </Badge>
+                                                </div>
+                                                
+                                                <div className="mt-2 space-y-1">
+                                                    <div className="flex items-center justify-between text-sm">
+                                                        <span className="text-muted-foreground">Seller:</span>
+                                                        <span className="font-medium">
+                                                            {sellersLoading ? "Loading..." : getSellerName(listing.seller_id, listing.seller_no)}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-sm">
+                                                        <span className="text-muted-foreground">Price:</span>
+                                                        <span className="font-medium">
+                                                            {listing.price > 0 ? formatPrice(listing.price, listing.currency) : 'Free'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-sm">
+                                                        <span className="text-muted-foreground">Category:</span>
+                                                        <Badge variant="secondary" className="text-xs">
+                                                            {listing.category}
+                                                        </Badge>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-sm">
+                                                        <span className="text-muted-foreground">Location:</span>
+                                                        <span className="text-xs truncate max-w-32" title={listing.location_display_name}>
+                                                            {listing.location_display_name ||
+                                                                [listing.city, listing.state].filter(Boolean).join(', ') ||
+                                                                'Not specified'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between text-sm">
+                                                        <span className="text-muted-foreground">Date:</span>
+                                                        <span className="text-xs">
+                                                            {formatDate(listing.created_at)}
+                                                        </span>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </TableCell>
 
-                                        {/* Seller Column */}
-                                        <TableCell>
-                                            <div className="space-y-1">
-                                                {sellersLoading ? (
-                                                    <div className="animate-pulse">
-                                                        <div className="h-4 bg-gray-200 rounded w-20"></div>
-                                                        <div className="h-3 bg-gray-200 rounded w-16"></div>
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        <div className="font-medium text-sm">
-                                                            {getSellerName(listing.seller_id, listing.seller_no)}
-                                                        </div>
-                                                        <div className="text-xs text-muted-foreground">
-                                                            {listing.seller_no}
-                                                        </div>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </TableCell>
+                                                <div className="mt-3 flex items-center space-x-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => handleViewItem(listing._id)}
+                                                        disabled={navigatingToItemId === listing._id}
+                                                        className="flex-1"
+                                                    >
+                                                        <Eye className="h-4 w-4 mr-1" />
+                                                        View
+                                                    </Button>
 
-                                        {/* Price Column */}
-                                        <TableCell>
-                                            <div className="font-medium">
-                                                {listing.price > 0 ? formatPrice(listing.price, listing.currency) : 'Free'}
-                                            </div>
-                                        </TableCell>
-
-                                        {/* Category Column */}
-                                        <TableCell>
-                                            <div className="space-y-1">
-                                                <Badge variant="secondary" className="text-xs">
-                                                    {listing.category}
-                                                </Badge>
-                                                {listing.subcategory && (
-                                                    <div className="text-xs text-muted-foreground">
-                                                        {listing.subcategory}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </TableCell>
-
-                                        {/* Location Column */}
-                                        <TableCell>
-                                            <div className="max-w-[150px]">
-                                                <div className="text-sm truncate" title={listing.location_display_name}>
-                                                    {listing.location_display_name ||
-                                                        [listing.city, listing.state].filter(Boolean).join(', ') ||
-                                                        'Location not specified'}
-                                                </div>
-                                            </div>
-                                        </TableCell>
-
-                                        {/* Status Column */}
-                                        <TableCell>
-                                            <div className="space-y-1">
-                                                <Badge className={`text-xs ${getStatusColor(listing.status)}`}>
-                                                    {listing.status || 'Unknown'}
-                                                </Badge>
-                                                {listing.deleted && (
-                                                    <div className="text-xs text-red-500">Deleted</div>
-                                                )}
-                                            </div>
-                                        </TableCell>
-
-                                        {/* Date Column */}
-                                        <TableCell>
-                                            <div className="text-sm text-muted-foreground">
-                                                {formatDate(listing.created_at)}
-                                            </div>
-                                        </TableCell>
-
-                                        {/* Actions Column */}
-                                        <TableCell>
-                                            <div className="flex items-center space-x-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleViewItem(listing._id)}
-                                                    disabled={navigatingToItemId === listing._id}
-                                                >
-                                                   
-                                                        <Eye className="h-4 w-4" />
-                                                   
-                                                </Button>
-
-                                                {!listing.deleted && (
-                                                    <>
-                                                        <Select
-                                                            value={listing.status}
-                                                            onValueChange={(value) => handleStatusUpdate(listing._id, value)}
-                                                        >
-                                                            <SelectTrigger className="h-8 w-24 text-xs">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-
-                                                                <SelectItem value="pending_review">Pending Review</SelectItem>
-                                                                <SelectItem value="active">Active</SelectItem>
-                                                                <SelectItem value="paused">Paused</SelectItem>
-                                                                <SelectItem value="sold">Sold</SelectItem>
-
-                                                                <SelectItem value="expired">Expired</SelectItem>
-
-                                                            </SelectContent>
-                                                        </Select>
-
-                                                        {currentUser?.role === 'manager' && (
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="sm"
-                                                                onClick={() => handleDeleteListing(listing._id)}
-                                                                className="text-red-500 hover:text-red-700"
+                                                    {!listing.deleted && (
+                                                        <>
+                                                            <Select
+                                                                value={listing.status}
+                                                                onValueChange={(value) => handleStatusUpdate(listing._id, value)}
                                                             >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        )}
-                                                    </>
-                                                )}
+                                                                <SelectTrigger className="h-8 w-20 text-xs">
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="pending_review">Pending</SelectItem>
+                                                                    <SelectItem value="active">Active</SelectItem>
+                                                                    <SelectItem value="paused">Paused</SelectItem>
+                                                                    <SelectItem value="sold">Sold</SelectItem>
+                                                                    <SelectItem value="expired">Expired</SelectItem>
+                                                                </SelectContent>
+                                                            </Select>
+
+                                                            {currentUser?.role === 'manager' && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleDeleteListing(listing._id)}
+                                                                    className="text-red-500 hover:text-red-700"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            ))
+                        )}
+                    </div>
+
+                    {/* Desktop view - Table layout */}
+                    <div className="hidden lg:block">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Item</TableHead>
+                                    <TableHead>Seller</TableHead>
+                                    <TableHead>Price</TableHead>
+                                    <TableHead>Category</TableHead>
+                                    <TableHead>Location</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {listings.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                                            No listings found
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                                ) : (
+                                    listings.map((listing) => (
+                                        <TableRow key={listing._id} className={listing.deleted ? "opacity-50" : ""}>
+                                            {/* Item Column - Image + Title */}
+                                            <TableCell className="font-medium">
+                                                <div className="flex items-center space-x-3">
+                                                    <Avatar className="h-12 w-12 rounded-md">
+                                                        <AvatarImage
+                                                            src={getImageUrl(listing.cover_image)}
+                                                            alt={listing.title}
+                                                            className="object-cover"
+                                                            onError={handleImageError}
+                                                        />
+                                                        <AvatarFallback className="rounded-md">
+                                                            <Package className="h-6 w-6" />
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <div className="min-w-0">
+                                                        <div className="font-medium text-sm truncate max-w-[200px]" title={listing.title}>
+                                                            {listing.title}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            ID: {listing._id}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+
+                                            {/* Seller Column */}
+                                            <TableCell>
+                                                <div className="space-y-1">
+                                                    {sellersLoading ? (
+                                                        <div className="animate-pulse">
+                                                            <div className="h-4 bg-gray-200 rounded w-20"></div>
+                                                            <div className="h-3 bg-gray-200 rounded w-16"></div>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <div className="font-medium text-sm">
+                                                                {getSellerName(listing.seller_id, listing.seller_no)}
+                                                            </div>
+                                                            <div className="text-xs text-muted-foreground">
+                                                                {listing.seller_no}
+                                                            </div>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+
+                                            {/* Price Column */}
+                                            <TableCell>
+                                                <div className="font-medium">
+                                                    {listing.price > 0 ? formatPrice(listing.price, listing.currency) : 'Free'}
+                                                </div>
+                                            </TableCell>
+
+                                            {/* Category Column */}
+                                            <TableCell>
+                                                <div className="space-y-1">
+                                                    <Badge variant="secondary" className="text-xs">
+                                                        {listing.category}
+                                                    </Badge>
+                                                    {listing.subcategory && (
+                                                        <div className="text-xs text-muted-foreground">
+                                                            {listing.subcategory}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+
+                                            {/* Location Column */}
+                                            <TableCell>
+                                                <div className="max-w-[150px]">
+                                                    <div className="text-sm truncate" title={listing.location_display_name}>
+                                                        {listing.location_display_name ||
+                                                            [listing.city, listing.state].filter(Boolean).join(', ') ||
+                                                            'Location not specified'}
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+
+                                            {/* Status Column */}
+                                            <TableCell>
+                                                <div className="space-y-1">
+                                                    <Badge className={`text-xs ${getStatusColor(listing.status)}`}>
+                                                        {listing.status || 'Unknown'}
+                                                    </Badge>
+                                                    {listing.deleted && (
+                                                        <div className="text-xs text-red-500">Deleted</div>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+
+                                            {/* Date Column */}
+                                            <TableCell>
+                                                <div className="text-sm text-muted-foreground">
+                                                    {formatDate(listing.created_at)}
+                                                </div>
+                                            </TableCell>
+
+                                            {/* Actions Column */}
+                                            <TableCell>
+                                                <div className="flex items-center space-x-1">
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleViewItem(listing._id)}
+                                                        disabled={navigatingToItemId === listing._id}
+                                                    >
+                                                       
+                                                            <Eye className="h-4 w-4" />
+                                                       
+                                                    </Button>
+
+                                                    {!listing.deleted && (
+                                                        <>
+                                                            <Select
+                                                                value={listing.status}
+                                                                onValueChange={(value) => handleStatusUpdate(listing._id, value)}
+                                                            >
+                                                                <SelectTrigger className="h-8 w-24 text-xs">
+                                                                    <SelectValue />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+
+                                                                    <SelectItem value="pending_review">Pending Review</SelectItem>
+                                                                    <SelectItem value="active">Active</SelectItem>
+                                                                    <SelectItem value="paused">Paused</SelectItem>
+                                                                    <SelectItem value="sold">Sold</SelectItem>
+
+                                                                    <SelectItem value="expired">Expired</SelectItem>
+
+                                                                </SelectContent>
+                                                            </Select>
+
+                                                            {currentUser?.role === 'manager' && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => handleDeleteListing(listing._id)}
+                                                                    className="text-red-500 hover:text-red-700"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
 
                     {/* Pagination */}
                     {totalPages > 1 && (
-                        <div className="flex items-center justify-between mt-6">
+                        <div className="flex flex-col sm:flex-row items-center justify-between mt-6 gap-4">
                             <div className="text-sm text-muted-foreground">
                                 Page {currentPage} of {totalPages} ({totalCount} total listings)
                             </div>

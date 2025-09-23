@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Search, User, LogOut, Settings, MapPin } from "lucide-react"
+import { Bell, Search, User, LogOut, Settings, MapPin, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/auth-context"
@@ -17,7 +17,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { useRouter } from "next/navigation"
 
-export function Header() {
+interface HeaderProps {
+  onMenuClick?: () => void;
+}
+
+export function Header({ onMenuClick }: HeaderProps) {
   const { user, logout } = useAuth();
   const { selectedRegion } = useRegion();
   const router = useRouter();
@@ -44,15 +48,25 @@ export function Header() {
   };
 
   return (
-    <header className="bg-card border-b border-border px-6 py-4">
+    <header className="bg-card border-b border-border px-4 sm:px-6 py-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          {/* Mobile menu button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onMenuClick}
+            className="lg:hidden"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+
           {/* Region Display for Admins */}
           {user?.role === 'admin' && selectedRegion && (
-            <div className="flex items-center space-x-2 px-3 py-1 bg-primary/10 rounded-lg border">
+            <div className="hidden sm:flex items-center space-x-2 px-3 py-1 bg-primary/10 rounded-lg border">
               <MapPin className="h-4 w-4 text-primary" />
               <span className="text-sm font-medium text-primary">{selectedRegion}</span>
-              <Badge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs hidden md:inline-flex">
                 Active Region
               </Badge>
             </div>
@@ -60,36 +74,44 @@ export function Header() {
           
           {/* Manager Access Indicator */}
           {user?.role === 'manager' && (
-            <div className="flex items-center space-x-2 px-3 py-1 bg-green-100 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+            <div className="hidden sm:flex items-center space-x-2 px-3 py-1 bg-green-100 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
               <MapPin className="h-4 w-4 text-green-600 dark:text-green-400" />
               <span className="text-sm font-medium text-green-700 dark:text-green-300">All Regions</span>
-              <Badge variant="outline" className="text-xs text-green-600 dark:text-green-400 border-green-300">
+              <Badge variant="outline" className="text-xs text-green-600 dark:text-green-400 border-green-300 hidden md:inline-flex">
                 Manager Access
               </Badge>
             </div>
           )}
 
-          <div className="relative">
+          {/* Search - Hidden on mobile */}
+          <div className="relative hidden md:block">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Search customers, campaigns..." className="pl-10 w-80" />
+            <Input placeholder="Search customers, campaigns..." className="pl-10 w-60 lg:w-80" />
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="icon">
+        <div className="flex items-center space-x-2 sm:space-x-4">
+          {/* Mobile search button */}
+          <Button variant="ghost" size="sm" className="md:hidden">
+            <Search className="h-4 w-4" />
+          </Button>
+
+          {/* Notifications */}
+          <Button variant="ghost" size="sm">
             <Bell className="h-4 w-4" />
           </Button>
 
+          {/* User Profile */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="flex items-center space-x-3 px-3 py-2 h-auto">
-                <Avatar className="h-8 w-8">
+              <Button variant="ghost" className="flex items-center space-x-2 sm:space-x-3 px-2 sm:px-3 py-2 h-auto">
+                <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
                   <AvatarImage src={user?.profile_image} alt={user?.username} />
                   <AvatarFallback>
                     {getUserInitials()}
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex flex-col items-start text-left">
+                <div className="hidden sm:flex flex-col items-start text-left">
                   <span className="text-sm font-medium">{user?.username}</span>
                   <span className="text-xs text-muted-foreground">{user?.email}</span>
                 </div>
@@ -105,6 +127,12 @@ export function Header() {
                 >
                   {user?.role === 'manager' ? 'Manager' : 'Admin'}
                 </Badge>
+                {/* Mobile region display */}
+                {user?.role === 'admin' && selectedRegion && (
+                  <Badge variant="outline" className="text-xs w-fit mt-1 sm:hidden">
+                    Region: {selectedRegion}
+                  </Badge>
+                )}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleProfileClick}>
