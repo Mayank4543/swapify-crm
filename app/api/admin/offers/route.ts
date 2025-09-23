@@ -1,45 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 import dbConnect from '@/lib/db';
 import Offer from '@/lib/models/Offer';
 import User from '@/lib/models/User';
 import Listing from '@/lib/models/Listing';
-
-// Force this API route to use Node.js runtime
-export const runtime = 'nodejs';
-
-const JWT_SECRET = process.env.JWT_SECRET || process.env.NEXTAUTH_SECRET || 'fallback-secret';
-
-// Middleware to verify authentication
-async function verifyAuth(request: NextRequest) {
-    const token = request.cookies.get('auth-token')?.value;
-
-    if (!token) {
-        return null;
-    }
-
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET) as any;
-        return decoded;
-    } catch {
-        return null;
-    }
-}
-
-// Middleware to verify manager role
-async function verifyManager(request: NextRequest) {
-    const user = await verifyAuth(request);
-    if (!user || user.role !== 'manager') {
-        return null;
-    }
-    return user;
-}
+import { verifyTokenAndGetUser, getRegionFilter } from '@/lib/auth-helpers';
 
 // GET - List all offers with manually fetched data
 export async function GET(request: NextRequest) {
     try {
-        const user = await verifyAuth(request);
+        const user = await verifyTokenAndGetUser(request);
         if (!user) {
             return NextResponse.json(
                 { error: 'Authentication required' },
@@ -56,10 +26,38 @@ export async function GET(request: NextRequest) {
         const search = searchParams.get('search');
         const skip = (page - 1) * limit;
 
-        // Build query
+        // Build base query
         let query: any = {};
         if (status && status !== 'all') {
             query.status = status;
+        }
+
+        // Get region-filtered listing IDs only (not users)
+        const listingRegionFilter = getRegionFilter(user, 'listing');
+
+        let allowedListingIds: string[] = [];
+
+        // If admin, get only listings from their region (but all users)
+        if (user.role === 'admin' && user.region) {
+            const regionListings = await Listing.find(listingRegionFilter).select('_id').lean();
+            allowedListingIds = regionListings.map(l => (l as any)._id.toString());
+
+            // Filter offers to only those involving listings from the admin's region
+            if (allowedListingIds.length > 0) {
+                query.listing = { $in: allowedListingIds.map(id => new mongoose.Types.ObjectId(id)) };
+            } else {
+                // No listings in the region, return empty
+                return NextResponse.json({
+                    offers: [],
+                    pagination: {
+                        page,
+                        limit,
+                        total: 0,
+                        pages: 0
+                    },
+                    regionFilter: user.region
+                });
+            }
         }
 
         // Handle search functionality
@@ -70,24 +68,32 @@ export async function GET(request: NextRequest) {
             const searchTerm = search.trim();
 
             // Search for users (buyers/sellers) by name, username, or email
-            const searchUsers = await User.find({
+            // Don't apply region filter to user search - search all users
+            const userSearchQuery: any = {
                 $or: [
                     { full_name: { $regex: searchTerm, $options: 'i' } },
                     { username: { $regex: searchTerm, $options: 'i' } },
                     { email: { $regex: searchTerm, $options: 'i' } }
                 ]
-            }).select('_id').lean();
+            };
 
+            const searchUsers = await User.find(userSearchQuery).select('_id').lean();
             searchUserIds = searchUsers.map(user => (user as any)._id.toString());
 
             // Search for listings by title or category
-            const searchListings = await mongoose.connection.collection('listings').find({
+            let listingSearchQuery: any = {
                 $or: [
                     { title: { $regex: searchTerm, $options: 'i' } },
                     { category: { $regex: searchTerm, $options: 'i' } }
                 ]
-            }).project({ _id: 1 }).toArray();
+            };
 
+            // Apply region filter to listing search for admins
+            if (user.role === 'admin' && Object.keys(listingRegionFilter).length > 0) {
+                listingSearchQuery = { $and: [listingSearchQuery, listingRegionFilter] };
+            }
+
+            const searchListings = await mongoose.connection.collection('listings').find(listingSearchQuery).project({ _id: 1 }).toArray();
             searchListingIds = searchListings.map(listing => listing._id.toString());
 
             // Add search conditions to the main query
@@ -107,7 +113,15 @@ export async function GET(request: NextRequest) {
                     );
                 }
 
-                query.$or = searchConditions;
+                if (query.$or) {
+                    query.$and = [
+                        { $or: query.$or },
+                        { $or: searchConditions }
+                    ];
+                    delete query.$or;
+                } else {
+                    query.$or = searchConditions;
+                }
             } else {
                 // If no users or listings found, return empty results
                 return NextResponse.json({
@@ -117,7 +131,8 @@ export async function GET(request: NextRequest) {
                         limit,
                         total: 0,
                         pages: 0
-                    }
+                    },
+                    regionFilter: user.role === 'admin' ? `${user.region} (Listings Only)` : 'All Regions'
                 });
             }
         }
@@ -137,7 +152,8 @@ export async function GET(request: NextRequest) {
                     limit,
                     total: await Offer.countDocuments(query),
                     pages: 0
-                }
+                },
+                regionFilter: user.role === 'admin' ? user.region : 'All Regions'
             });
         }
 
@@ -182,7 +198,8 @@ export async function GET(request: NextRequest) {
                 limit,
                 total,
                 pages: Math.ceil(total / limit)
-            }
+            },
+            regionFilter: user.role === 'admin' ? `${user.region} (Listings Only)` : 'All Regions'
         });
 
     } catch (error) {
@@ -197,7 +214,7 @@ export async function GET(request: NextRequest) {
 // PUT - Update offer status
 export async function PUT(request: NextRequest) {
     try {
-        const user = await verifyAuth(request);
+        const user = await verifyTokenAndGetUser(request);
         if (!user) {
             return NextResponse.json(
                 { error: 'Authentication required' },
@@ -220,6 +237,35 @@ export async function PUT(request: NextRequest) {
                 { error: 'Invalid status value' },
                 { status: 400 }
             );
+        }
+
+        // For admins, check if they have access to this offer based on listing region only
+        let query: any = { _id: offerId };
+        
+        if (user.role === 'admin' && user.region) {
+            // Get the offer first to check the associated listing
+            const offer = await Offer.findById(offerId).lean();
+            if (!offer) {
+                return NextResponse.json(
+                    { error: 'Offer not found' },
+                    { status: 404 }
+                );
+            }
+
+            // Check if the offer involves listings from the admin's region
+            const listingRegionFilter = getRegionFilter(user, 'listing');
+
+            const regionListings = await Listing.find(listingRegionFilter).select('_id').lean();
+            const allowedListingIds = regionListings.map(l => (l as any)._id.toString());
+
+            const hasAccess = allowedListingIds.includes((offer as any).listing.toString());
+
+            if (!hasAccess) {
+                return NextResponse.json(
+                    { error: 'Access denied - Offer listing not in your region' },
+                    { status: 403 }
+                );
+            }
         }
 
         const updatedOffer = await Offer.findByIdAndUpdate(
@@ -252,8 +298,8 @@ export async function PUT(request: NextRequest) {
 // DELETE - Delete offer (Manager only)
 export async function DELETE(request: NextRequest) {
     try {
-        const user = await verifyManager(request);
-        if (!user) {
+        const user = await verifyTokenAndGetUser(request);
+        if (!user || user.role !== 'manager') {
             return NextResponse.json(
                 { error: 'Forbidden - Manager access required' },
                 { status: 403 }
@@ -270,6 +316,7 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
+        // Managers can delete offers from any region
         const result = await Offer.findByIdAndDelete(offerId);
 
         if (!result) {

@@ -8,24 +8,35 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/lib/auth-context';
+import { useRegion } from '@/lib/region-context';
+import { RegionSelectionDialog } from '@/components/admin/region-selection-dialog';
 
 function LoginForm() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [showRegionDialog, setShowRegionDialog] = useState(false);
     const { login, user } = useAuth();
+    const { selectedRegion, setSelectedRegion, isRegionRequired } = useRegion();
     const router = useRouter();
 
-    // Redirect if already authenticated
     useEffect(() => {
-        console.log('Auth state changed - user:', user);
         if (user) {
-            console.log('User is authenticated, redirecting to admin...');
-            // Try using window.location for a hard redirect
-            window.location.replace('/admin');
+            // If user is logged in and it's a manager, go directly to dashboard
+            if (user.role === 'manager') {
+                window.location.replace('/admin');
+            } 
+            // If user is admin and has selected region, go to dashboard
+            else if (user.role === 'admin' && selectedRegion) {
+                window.location.replace('/admin');
+            }
+            // If user is admin but no region selected, show region dialog
+            else if (user.role === 'admin' && !selectedRegion) {
+                setShowRegionDialog(true);
+            }
         }
-    }, [user]);
+    }, [user, selectedRegion]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -33,13 +44,11 @@ function LoginForm() {
         setIsLoading(true);
 
         try {
-            console.log('Form submitted, attempting login...');
             const success = await login(username, password);
-            console.log('Login result:', success);
 
             if (success) {
-                console.log('Login successful, waiting for auth context update...');
-                // Don't redirect here, let the useEffect handle it when user state updates
+                console.log('Login successful, checking role for region selection...');
+                // Region dialog will be shown in useEffect if needed
             } else {
                 setError('Invalid username or password');
             }
@@ -49,6 +58,19 @@ function LoginForm() {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleRegionSelect = (region: string) => {
+        setSelectedRegion(region);
+        setShowRegionDialog(false);
+        // Navigate to dashboard after region selection
+        window.location.replace('/admin');
+    };
+
+    const handleRegionCancel = () => {
+        // Log out the user if they cancel region selection
+        setShowRegionDialog(false);
+        window.location.replace('/login');
     };
 
     return (
@@ -115,6 +137,13 @@ function LoginForm() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Region Selection Dialog */}
+            <RegionSelectionDialog
+                isOpen={showRegionDialog}
+                onRegionSelect={handleRegionSelect}
+                onCancel={handleRegionCancel}
+            />
         </div>
     );
 }

@@ -1,32 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import jwt from 'jsonwebtoken';
 import dbConnect from '@/lib/db';
 import Listing from '@/lib/models/Listing';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
-
-async function verifyToken(request: NextRequest) {
-    const token = request.cookies.get('auth-token')?.value;
-
-    if (!token) {
-        return null;
-    }
-
-    try {
-        const decoded = jwt.verify(token, JWT_SECRET) as {
-            id: string;
-            username: string;
-            role: string;
-        };
-        return decoded;
-    } catch (error) {
-        return null;
-    }
-}
+import { verifyTokenAndGetUser, getRegionFilter } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
     try {
-        const user = await verifyToken(request);
+        const user = await verifyTokenAndGetUser(request);
 
         if (!user) {
             return NextResponse.json(
@@ -53,14 +32,31 @@ export async function GET(request: NextRequest) {
             query.deleted = { $ne: true };
         }
 
+        // Apply region filter based on user role
+        const regionFilter = getRegionFilter(user);
+        Object.assign(query, regionFilter);
+
         // Search filter
         if (search) {
-            query.$or = [
-                { title: { $regex: search, $options: 'i' } },
-                { description: { $regex: search, $options: 'i' } },
-                { seller_no: { $regex: search, $options: 'i' } },
-                { location_display_name: { $regex: search, $options: 'i' } }
-            ];
+            const searchFilter = {
+                $or: [
+                    { title: { $regex: search, $options: 'i' } },
+                    { description: { $regex: search, $options: 'i' } },
+                    { seller_no: { $regex: search, $options: 'i' } },
+                    { location_display_name: { $regex: search, $options: 'i' } }
+                ]
+            };
+            
+            // Combine with existing query
+            if (query.$or) {
+                query.$and = [
+                    { $or: query.$or }, // Region filter
+                    searchFilter
+                ];
+                delete query.$or;
+            } else {
+                Object.assign(query, searchFilter);
+            }
         }
 
         // Category filter
@@ -94,7 +90,8 @@ export async function GET(request: NextRequest) {
                 totalCount,
                 hasNextPage: page * limit < totalCount,
                 hasPrevPage: page > 1
-            }
+            },
+            regionFilter: user.role === 'admin' ? user.region : 'All Regions'
         });
 
     } catch (error) {
@@ -108,7 +105,7 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
     try {
-        const user = await verifyToken(request);
+        const user = await verifyTokenAndGetUser(request);
 
         if (!user) {
             return NextResponse.json(
@@ -128,15 +125,20 @@ export async function PUT(request: NextRequest) {
 
         await dbConnect();
 
-        const listing = await Listing.findByIdAndUpdate(
-            id,
+        // Build query with region filter
+        const query: any = { _id: id };
+        const regionFilter = getRegionFilter(user);
+        Object.assign(query, regionFilter);
+
+        const listing = await Listing.findOneAndUpdate(
+            query,
             { status },
             { new: true }
         );
 
         if (!listing) {
             return NextResponse.json(
-                { error: 'Listing not found' },
+                { error: 'Listing not found or access denied' },
                 { status: 404 }
             );
         }
@@ -157,7 +159,7 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
     try {
-        const user = await verifyToken(request);
+        const user = await verifyTokenAndGetUser(request);
 
         if (!user || user.role !== 'manager') {
             return NextResponse.json(
@@ -177,6 +179,7 @@ export async function DELETE(request: NextRequest) {
 
         await dbConnect();
 
+        // Managers can delete from any region, so no region filter needed
         const listing = await Listing.findByIdAndUpdate(
             id,
             { deleted: true },

@@ -4,19 +4,19 @@ import jwt from 'jsonwebtoken';
 import dbConnect from '@/lib/db';
 import Admin from '@/lib/models/Admin';
 
-// Force this API route to use Node.js runtime
+
 export const runtime = 'nodejs';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
 
 export async function POST(request: NextRequest) {
     try {
-        console.log('Attempting database connection...');
+       
         await dbConnect();
-        console.log('Database connected successfully');
+        
 
         const { username, password } = await request.json();
-        console.log('Login attempt for username:', username);
+       
 
         if (!username || !password) {
             return NextResponse.json(
@@ -25,10 +25,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Find admin by username
-        console.log('Searching for admin with username:', username);
+       
         const admin = await Admin.findOne({ username });
-        console.log('Admin found:', admin ? 'Yes' : 'No');
+       
 
         if (!admin) {
             return NextResponse.json(
@@ -38,9 +37,9 @@ export async function POST(request: NextRequest) {
         }
 
         // Verify password
-        console.log('Verifying password...');
+      
         const isValidPassword = await bcrypt.compare(password, admin.password);
-        console.log('Password valid:', isValidPassword);
+       
 
         if (!isValidPassword) {
             return NextResponse.json(
@@ -61,10 +60,10 @@ export async function POST(request: NextRequest) {
             { expiresIn: '24h' }
         );
 
-        // Update last login
+      
         await Admin.findByIdAndUpdate(admin._id, { last_login: new Date() });
 
-        // Create response with token in httpOnly cookie
+    
         const response = NextResponse.json({
             message: 'Login successful',
             user: {
@@ -72,7 +71,8 @@ export async function POST(request: NextRequest) {
                 username: admin.username,
                 role: admin.role,
                 email: admin.email,
-                profile_image: admin.profile_image
+                profile_image: admin.profile_image,
+                region: admin.region
             }
         });
 

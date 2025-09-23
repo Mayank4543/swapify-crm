@@ -8,6 +8,7 @@ export interface IAdmin extends Document {
     profile_image?: string;
     full_name?: string;
     phone?: string;
+    region?: string; // Region the admin belongs to (only for admins, managers have access to all)
     last_login?: Date;
     createdAt: Date;
     updatedAt: Date;
@@ -21,6 +22,7 @@ const AdminSchema: Schema = new Schema({
     profile_image: { type: String },
     full_name: { type: String },
     phone: { type: String },
+    region: { type: String }, // Region for admins, null for managers
     last_login: { type: Date },
 }, {
     timestamps: true

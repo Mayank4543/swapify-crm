@@ -1,9 +1,10 @@
 'use client';
 
-import { Bell, Search, User, LogOut, Settings } from "lucide-react"
+import { Bell, Search, User, LogOut, Settings, MapPin } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/lib/auth-context"
+import { useRegion } from "@/lib/region-context"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,6 +19,7 @@ import { useRouter } from "next/navigation"
 
 export function Header() {
   const { user, logout } = useAuth();
+  const { selectedRegion } = useRegion();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -45,6 +47,28 @@ export function Header() {
     <header className="bg-card border-b border-border px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
+          {/* Region Display for Admins */}
+          {user?.role === 'admin' && selectedRegion && (
+            <div className="flex items-center space-x-2 px-3 py-1 bg-primary/10 rounded-lg border">
+              <MapPin className="h-4 w-4 text-primary" />
+              <span className="text-sm font-medium text-primary">{selectedRegion}</span>
+              <Badge variant="outline" className="text-xs">
+                Active Region
+              </Badge>
+            </div>
+          )}
+          
+          {/* Manager Access Indicator */}
+          {user?.role === 'manager' && (
+            <div className="flex items-center space-x-2 px-3 py-1 bg-green-100 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+              <MapPin className="h-4 w-4 text-green-600 dark:text-green-400" />
+              <span className="text-sm font-medium text-green-700 dark:text-green-300">All Regions</span>
+              <Badge variant="outline" className="text-xs text-green-600 dark:text-green-400 border-green-300">
+                Manager Access
+              </Badge>
+            </div>
+          )}
+
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search customers, campaigns..." className="pl-10 w-80" />

@@ -8,6 +8,7 @@ interface User {
     email: string;
     role: 'manager' | 'admin';
     profile_image?: string;
+    region?: string;
 }
 
 interface AuthContextType {
@@ -44,7 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const login = async (username: string, password: string): Promise<boolean> => {
         try {
-            console.log('Attempting login for:', username);
+           
             const response = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: {
@@ -53,11 +54,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 body: JSON.stringify({ username, password }),
             });
 
-            console.log('Login response status:', response.status);
+          
 
             if (response.ok) {
                 const data = await response.json();
-                console.log('Login successful, user data:', data.user);
+               
                 setUser(data.user);
                 return true;
             } else {

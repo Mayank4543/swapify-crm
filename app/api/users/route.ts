@@ -1,38 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import User from '@/lib/models/User';
-import jwt from 'jsonwebtoken';
-
-// Force this API route to use Node.js runtime
-export const runtime = 'nodejs';
-
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret';
+import { verifyTokenAndGetUser, getRegionFilter } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
     try {
+        const user = await verifyTokenAndGetUser(request);
+
+        if (!user) {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         await dbConnect();
 
         const { searchParams } = new URL(request.url);
         const userId = searchParams.get('id');
 
+        // Build base query with region filter
+        const regionFilter = getRegionFilter(user, 'user');
+
         // If ID is provided, fetch single user
         if (userId) {
-            const user = await User.findById(userId, { user_password: 0 });
+            const query = { _id: userId, ...regionFilter };
+            const foundUser = await User.findOne(query, { user_password: 0 });
 
-            if (!user) {
+            if (!foundUser) {
                 return NextResponse.json(
-                    { error: 'User not found' },
+                    { error: 'User not found or access denied' },
                     { status: 404 }
                 );
             }
 
-            return NextResponse.json({ user });
+            return NextResponse.json({ user: foundUser });
         }
 
-        // Otherwise, fetch all users
-        const users = await User.find({}, { user_password: 0 }).sort({ created_at: -1 });
+        // Otherwise, fetch all users with region filter
+        const users = await User.find(regionFilter, { user_password: 0 }).sort({ created_at: -1 });
 
-        return NextResponse.json({ users });
+        return NextResponse.json({
+            users,
+            regionFilter: 'All Users' // Users are not filtered by region
+        });
 
     } catch (error) {
         console.error('Get users error:', error);
@@ -97,6 +108,15 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
     try {
+        const user = await verifyTokenAndGetUser(request);
+
+        if (!user) {
+            return NextResponse.json(
+                { error: 'Unauthorized' },
+                { status: 401 }
+            );
+        }
+
         await dbConnect();
 
         const { id, username, email, status, segment, phone_number, country, state, city, pincode, address, last_visit } = await request.json();
@@ -107,6 +127,10 @@ export async function PUT(request: NextRequest) {
                 { status: 400 }
             );
         }
+
+        // Build query with region filter
+        const regionFilter = getRegionFilter(user, 'user');
+        const query = { _id: id, ...regionFilter };
 
         const updateData: any = {};
         if (username) updateData.username = username;
@@ -121,22 +145,22 @@ export async function PUT(request: NextRequest) {
         if (address !== undefined) updateData.address = address;
         if (last_visit) updateData.last_visit = new Date(last_visit);
 
-        const user = await User.findByIdAndUpdate(
-            id,
+        const updatedUser = await User.findOneAndUpdate(
+            query,
             updateData,
             { new: true, select: '-user_password' }
         );
 
-        if (!user) {
+        if (!updatedUser) {
             return NextResponse.json(
-                { error: 'User not found' },
+                { error: 'User not found or access denied' },
                 { status: 404 }
             );
         }
 
         return NextResponse.json({
             message: 'User updated successfully',
-            user
+            user: updatedUser
         });
 
     } catch (error) {
@@ -153,27 +177,17 @@ export async function DELETE(request: NextRequest) {
         await dbConnect();
 
         // Verify token and check role
-        const token = request.cookies.get('auth-token')?.value;
+        const user = await verifyTokenAndGetUser(request);
 
-        if (!token) {
+        if (!user) {
             return NextResponse.json(
                 { error: 'Authentication required' },
                 { status: 401 }
             );
         }
 
-        let decoded: any;
-        try {
-            decoded = jwt.verify(token, JWT_SECRET);
-        } catch (error) {
-            return NextResponse.json(
-                { error: 'Invalid token' },
-                { status: 401 }
-            );
-        }
-
         // Check if user is manager (only managers can delete users)
-        if (decoded.role !== 'manager') {
+        if (user.role !== 'manager') {
             return NextResponse.json(
                 { error: 'Insufficient permissions. Only managers can delete users.' },
                 { status: 403 }
@@ -189,9 +203,10 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
-        const user = await User.findByIdAndDelete(id);
+        // Managers can delete users from any region, so no region filter needed
+        const deletedUser = await User.findByIdAndDelete(id);
 
-        if (!user) {
+        if (!deletedUser) {
             return NextResponse.json(
                 { error: 'User not found' },
                 { status: 404 }

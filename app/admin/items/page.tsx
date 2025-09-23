@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious, PaginationEllipsis } from '@/components/ui/pagination';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
-import { Skeleton } from '@/components/ui/skeleton';
+
 import { Package, Search, Filter, Download, Eye, Edit, Trash2, MapPin, Tag, DollarSign, User, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -41,7 +41,7 @@ interface Listing {
     expires_at?: string;
     currency: 'INR';
     __v?: number;
-    // GeoJSON location field (might be present in newer records)
+    
     location?: {
         type: 'Point';
         coordinates: [number, number]; // [longitude, latitude]
@@ -59,6 +59,7 @@ export default function ItemListPage() {
     const router = useRouter();
     const [listings, setListings] = useState<Listing[]>([]);
     const [sellers, setSellers] = useState<{ [key: string]: Seller }>({});
+    const [sellersLoading, setSellersLoading] = useState(false);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [categoryFilter, setCategoryFilter] = useState('all');
@@ -95,17 +96,19 @@ export default function ItemListPage() {
             const response = await fetch(`/api/listings?${params}`);
             if (response.ok) {
                 const data = await response.json();
-                console.log('Fetched listings data:', data);
-                console.log('First listing:', data.listings[0]);
+                console.log('Listings API response:', data);
+                
                 setListings(data.listings);
                 setTotalPages(data.pagination.totalPages);
                 setTotalCount(data.pagination.totalCount);
                 setHasNextPage(data.pagination.hasNextPage);
                 setHasPrevPage(data.pagination.hasPrevPage);
 
-                // Fetch seller information
+                console.log('Listings data:', data.listings);
+                // Fetch seller information for the listings
                 await fetchSellers(data.listings);
             } else {
+                console.error('Failed to load listings:', response.status);
                 toast.error('Failed to load listings');
             }
         } catch (error) {
@@ -118,22 +121,58 @@ export default function ItemListPage() {
 
     const fetchSellers = async (listingsData: Listing[]) => {
         const sellerIds = [...new Set(listingsData.map(listing => listing.seller_id))];
-        const sellersData: { [key: string]: Seller } = {};
-
-        // Fetch seller details for each unique seller_id
-        for (const sellerId of sellerIds) {
-            try {
-                const response = await fetch(`/api/users?id=${sellerId}`);
-                if (response.ok) {
-                    const data = await response.json();
-                    sellersData[sellerId] = data.user;
-                }
-            } catch (error) {
-                console.error(`Error fetching seller ${sellerId}:`, error);
-            }
+        
+        console.log('Fetching sellers for IDs:', sellerIds);
+        
+        if (sellerIds.length === 0) {
+            setSellers({});
+            return;
         }
 
-        setSellers(sellersData);
+        try {
+            setSellersLoading(true);
+            // Fetch all sellers in one request
+            const response = await fetch('/api/users');
+            console.log('Users API response status:', response.status);
+            
+            if (response.ok) {
+                const data = await response.json();
+                console.log('Users API response data:', data);
+                
+                const sellersData: { [key: string]: Seller } = {};
+                
+                // Create a mapping of seller data
+                if (data.users && Array.isArray(data.users)) {
+                    console.log('Total users found:', data.users.length);
+                    
+                    data.users.forEach((user: any) => {
+                        if (sellerIds.includes(user._id)) {
+                            sellersData[user._id] = {
+                                _id: user._id,
+                                username: user.username,
+                                full_name: user.full_name
+                            };
+                            console.log('Mapped seller:', user._id, user.username, user.full_name);
+                        }
+                    });
+                    
+                    console.log('Final sellers mapping:', sellersData);
+                } else {
+                    console.error('Users data is not in expected format:', data);
+                }
+                
+                setSellers(sellersData);
+            } else {
+                const errorData = await response.text();
+                console.error('Failed to fetch sellers:', response.status, errorData);
+                setSellers({});
+            }
+        } catch (error) {
+            console.error('Error fetching sellers:', error);
+            setSellers({});
+        } finally {
+            setSellersLoading(false);
+        }
     };
 
     const handleSearchChange = (term: string) => {
@@ -200,7 +239,7 @@ export default function ItemListPage() {
     };
 
     const formatPrice = (price: number, currency?: string) => {
-        // Default to INR if currency is empty or invalid
+        
         const validCurrency = currency && currency.length === 3 ? currency : 'INR';
 
         try {
@@ -209,7 +248,7 @@ export default function ItemListPage() {
                 currency: validCurrency,
             }).format(price);
         } catch (error) {
-            // Fallback to simple number formatting if currency is invalid
+
             return `₹${price.toLocaleString('en-IN')}`;
         }
     };
@@ -222,29 +261,39 @@ export default function ItemListPage() {
         });
     };
 
-    const getSellerName = (sellerId: string) => {
+    const getSellerName = (sellerId: string, sellerNo?: string) => {
         const seller = sellers[sellerId];
-        return seller?.full_name || seller?.username || 'Unknown User';
+        if (seller) {
+            return seller.full_name || seller.username || 'Unknown User';
+        }
+        
+        // If seller not found in our data, show seller_no as fallback
+        if (sellerNo) {
+            return `User #${sellerNo}`;
+        }
+        
+        // Last fallback - show partial seller ID
+        return `User ${sellerId.slice(-6)}...`;
     };
 
     const getImageUrl = (imageName: string) => {
         if (!imageName) {
-            console.log('No image name provided');
+          
             return '/placeholder.jpg';
         }
 
-        // Use environment variable for image base URL
-        const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGE_BASE_URL || 'http://phpstack-1409678-5243790.cloudwaysapps.com/uploads';
+        
+        const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGE_BASE_URL ;
 
-        // If imageName already contains the full URL, return it as is
+       
         if (imageName.startsWith('http')) {
-            console.log('Full URL provided:', imageName);
+          
             return imageName;
         }
 
-        // If it's just a filename, construct the full URL
+   
         const fullUrl = `${imageBaseUrl}/${imageName}`;
-        console.log('Constructed URL:', fullUrl, 'from filename:', imageName);
+        
         return fullUrl;
     };
 
@@ -476,12 +525,21 @@ export default function ItemListPage() {
                                         {/* Seller Column */}
                                         <TableCell>
                                             <div className="space-y-1">
-                                                <div className="font-medium text-sm">
-                                                    {getSellerName(listing.seller_id)}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    {listing.seller_no}
-                                                </div>
+                                                {sellersLoading ? (
+                                                    <div className="animate-pulse">
+                                                        <div className="h-4 bg-gray-200 rounded w-20"></div>
+                                                        <div className="h-3 bg-gray-200 rounded w-16"></div>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div className="font-medium text-sm">
+                                                            {getSellerName(listing.seller_id, listing.seller_no)}
+                                                        </div>
+                                                        <div className="text-xs text-muted-foreground">
+                                                            {listing.seller_no}
+                                                        </div>
+                                                    </>
+                                                )}
                                             </div>
                                         </TableCell>
 
