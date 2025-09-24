@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Camera, Save, User, Mail, Shield, Edit2 } from 'lucide-react';
+import { Shield } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ProfileData {
@@ -26,11 +26,7 @@ interface ProfileData {
 export default function ProfilePage() {
     const { user } = useAuth();
     const [profileData, setProfileData] = useState<ProfileData | null>(null);
-    const [editMode, setEditMode] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [imageFile, setImageFile] = useState<File | null>(null);
-    const [previewUrl, setPreviewUrl] = useState<string>('');
 
     useEffect(() => {
         fetchProfile();
@@ -50,63 +46,6 @@ export default function ProfilePage() {
             toast.error('Error loading profile');
         } finally {
             setLoading(false);
-        }
-    };
-
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                toast.error('Image size should be less than 5MB');
-                return;
-            }
-
-            setImageFile(file);
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                setPreviewUrl(reader.result as string);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    const handleSave = async () => {
-        if (!profileData) return;
-
-        setSaving(true);
-
-        try {
-            const formData = new FormData();
-            formData.append('username', profileData.username);
-            formData.append('email', profileData.email);
-            formData.append('full_name', profileData.full_name || '');
-            formData.append('phone', profileData.phone || '');
-
-            if (imageFile) {
-                formData.append('profile_image', imageFile);
-            }
-
-            const response = await fetch('/api/auth/profile', {
-                method: 'PUT',
-                body: formData,
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                setProfileData(data.profile);
-                setEditMode(false);
-                setImageFile(null);
-                setPreviewUrl('');
-                toast.success('Profile updated successfully');
-            } else {
-                const error = await response.json();
-                toast.error(error.error || 'Failed to update profile');
-            }
-        } catch (error) {
-            console.error('Error updating profile:', error);
-            toast.error('Error updating profile');
-        } finally {
-            setSaving(false);
         }
     };
 
@@ -132,7 +71,7 @@ export default function ProfilePage() {
             <div className="space-y-6">
                 <div>
                     <h1 className="text-3xl font-bold text-foreground">Your Profile</h1>
-                    <p className="text-muted-foreground">Manage your account settings and preferences</p>
+                    <p className="text-muted-foreground">View your account information and role details</p>
                 </div>
                 <div className="grid gap-6">
                     <Card>
@@ -156,7 +95,7 @@ export default function ProfilePage() {
             <div className="space-y-6">
                 <div>
                     <h1 className="text-3xl font-bold text-foreground">Your Profile</h1>
-                    <p className="text-muted-foreground">Manage your account settings and preferences</p>
+                    <p className="text-muted-foreground">View your account information and role details</p>
                 </div>
                 <Card>
                     <CardContent className="p-6 text-center">
@@ -172,43 +111,9 @@ export default function ProfilePage() {
 
     return (
         <div className="space-y-6">
-            <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold text-foreground">Your Profile</h1>
-                    <p className="text-muted-foreground">Manage your account settings and preferences</p>
-                </div>
-                <div className="flex space-x-2">
-                    {editMode ? (
-                        <>
-                            <Button variant="outline" onClick={() => {
-                                setEditMode(false);
-                                setImageFile(null);
-                                setPreviewUrl('');
-                                fetchProfile();
-                            }}>
-                                Cancel
-                            </Button>
-                            <Button onClick={handleSave} disabled={saving}>
-                                {saving ? (
-                                    <>
-                                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                                        Saving...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Save className="mr-2 h-4 w-4" />
-                                        Save Changes
-                                    </>
-                                )}
-                            </Button>
-                        </>
-                    ) : (
-                        <Button onClick={() => setEditMode(true)}>
-                            <Edit2 className="mr-2 h-4 w-4" />
-                            Edit Profile
-                        </Button>
-                    )}
-                </div>
+            <div>
+                <h1 className="text-3xl font-bold text-foreground">Your Profile</h1>
+                <p className="text-muted-foreground">View your account information and role details</p>
             </div>
 
             <div className="grid gap-6">
@@ -223,33 +128,15 @@ export default function ProfilePage() {
                     <CardContent className="space-y-6">
                         {/* Avatar Section */}
                         <div className="flex items-center space-x-4">
-                            <div className="relative">
-                                <Avatar className="h-20 w-20">
-                                    <AvatarImage
-                                        src={previewUrl || profileData.profile_image}
-                                        alt={profileData.username}
-                                    />
-                                    <AvatarFallback className="text-lg">
-                                        {getUserInitials()}
-                                    </AvatarFallback>
-                                </Avatar>
-                                {editMode && (
-                                    <label
-                                        htmlFor="avatar-upload"
-                                        className="absolute -bottom-2 -right-2 bg-primary text-primary-foreground rounded-full p-2 cursor-pointer hover:bg-primary/90 transition-colors"
-                                    >
-                                        <Camera className="h-4 w-4" />
-                                    </label>
-                                )}
-                                <input
-                                    id="avatar-upload"
-                                    type="file"
-                                    accept="image/*"
-                                    onChange={handleImageChange}
-                                    className="hidden"
-                                    disabled={!editMode}
+                            <Avatar className="h-20 w-20">
+                                <AvatarImage
+                                    src={profileData.profile_image}
+                                    alt={profileData.username}
                                 />
-                            </div>
+                                <AvatarFallback className="text-lg">
+                                    {getUserInitials()}
+                                </AvatarFallback>
+                            </Avatar>
                             <div className="space-y-2">
                                 <h3 className="text-2xl font-semibold">{profileData.username}</h3>
                                 <p className="text-muted-foreground">{profileData.email}</p>
@@ -261,52 +148,42 @@ export default function ProfilePage() {
 
                         <Separator />
 
-                        {/* Editable Fields */}
+                        {/* Profile Fields */}
                         <div className="grid gap-4 md:grid-cols-2">
                             <div className="space-y-2">
-                                <Label htmlFor="username">Username</Label>
+                                <Label>Username</Label>
                                 <Input
-                                    id="username"
                                     value={profileData.username}
-                                    onChange={(e) => setProfileData({ ...profileData, username: e.target.value })}
-                                    disabled={!editMode}
-                                    className={!editMode ? "bg-muted" : ""}
+                                    disabled
+                                    className="bg-muted"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
+                                <Label>Email</Label>
                                 <Input
-                                    id="email"
                                     type="email"
                                     value={profileData.email}
-                                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                                    disabled={!editMode}
-                                    className={!editMode ? "bg-muted" : ""}
+                                    disabled
+                                    className="bg-muted"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="full_name">Full Name</Label>
+                                <Label>Full Name</Label>
                                 <Input
-                                    id="full_name"
-                                    value={profileData.full_name || ''}
-                                    onChange={(e) => setProfileData({ ...profileData, full_name: e.target.value })}
-                                    disabled={!editMode}
-                                    className={!editMode ? "bg-muted" : ""}
-                                    placeholder="Enter your full name"
+                                    value={profileData.full_name || 'Not provided'}
+                                    disabled
+                                    className="bg-muted"
                                 />
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="phone">Phone</Label>
+                                <Label>Phone</Label>
                                 <Input
-                                    id="phone"
-                                    value={profileData.phone || ''}
-                                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                                    disabled={!editMode}
-                                    className={!editMode ? "bg-muted" : ""}
-                                    placeholder="Enter your phone number"
+                                    value={profileData.phone || 'Not provided'}
+                                    disabled
+                                    className="bg-muted"
                                 />
                             </div>
                         </div>
@@ -350,20 +227,7 @@ export default function ProfilePage() {
                     </CardContent>
                 </Card>
 
-                {/* Account Security */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Account Security</CardTitle>
-                        <CardDescription>
-                            Manage your account security settings
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Button variant="outline">
-                            Change Password
-                        </Button>
-                    </CardContent>
-                </Card>
+
             </div>
         </div>
     );
