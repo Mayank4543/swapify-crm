@@ -41,7 +41,7 @@ interface Listing {
     expires_at?: string;
     currency: 'INR';
     __v?: number;
-    
+
     location?: {
         type: 'Point';
         coordinates: [number, number]; // [longitude, latitude]
@@ -67,6 +67,7 @@ export default function ItemListPage() {
     const [includeDeleted, setIncludeDeleted] = useState(false);
     const [showFilters, setShowFilters] = useState(false);
     const [navigatingToItemId, setNavigatingToItemId] = useState<string | null>(null);
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
 
     // Pagination states
     const [currentPage, setCurrentPage] = useState(1);
@@ -77,9 +78,16 @@ export default function ItemListPage() {
 
     const itemsPerPage = 10;
 
+    // Debounce the search term to avoid refetching on every keystroke
+    useEffect(() => {
+        const id = setTimeout(() => setDebouncedSearchTerm(searchTerm), 400);
+        return () => clearTimeout(id);
+    }, [searchTerm]);
+
     useEffect(() => {
         fetchListings();
-    }, [currentPage, searchTerm, categoryFilter, statusFilter, includeDeleted]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentPage, debouncedSearchTerm, categoryFilter, statusFilter, includeDeleted]);
 
     const fetchListings = async () => {
         try {
@@ -87,7 +95,7 @@ export default function ItemListPage() {
             const params = new URLSearchParams({
                 page: currentPage.toString(),
                 limit: itemsPerPage.toString(),
-                search: searchTerm,
+                search: debouncedSearchTerm,
                 category: categoryFilter,
                 status: statusFilter,
                 includeDeleted: includeDeleted.toString()
@@ -96,16 +104,15 @@ export default function ItemListPage() {
             const response = await fetch(`/api/listings?${params}`);
             if (response.ok) {
                 const data = await response.json();
-                console.log('Listings API response:', data);
-                
+               
+
                 setListings(data.listings);
                 setTotalPages(data.pagination.totalPages);
                 setTotalCount(data.pagination.totalCount);
                 setHasNextPage(data.pagination.hasNextPage);
                 setHasPrevPage(data.pagination.hasPrevPage);
 
-                console.log('Listings data:', data.listings);
-                // Fetch seller information for the listings
+               
                 await fetchSellers(data.listings);
             } else {
                 console.error('Failed to load listings:', response.status);
@@ -121,9 +128,9 @@ export default function ItemListPage() {
 
     const fetchSellers = async (listingsData: Listing[]) => {
         const sellerIds = [...new Set(listingsData.map(listing => listing.seller_id))];
+
         
-        console.log('Fetching sellers for IDs:', sellerIds);
-        
+
         if (sellerIds.length === 0) {
             setSellers({});
             return;
@@ -133,18 +140,17 @@ export default function ItemListPage() {
             setSellersLoading(true);
             // Fetch all sellers in one request
             const response = await fetch('/api/users');
-            console.log('Users API response status:', response.status);
-            
+           
+
             if (response.ok) {
                 const data = await response.json();
-                console.log('Users API response data:', data);
-                
+              
+
                 const sellersData: { [key: string]: Seller } = {};
-                
-                // Create a mapping of seller data
+
                 if (data.users && Array.isArray(data.users)) {
-                    console.log('Total users found:', data.users.length);
                     
+
                     data.users.forEach((user: any) => {
                         if (sellerIds.includes(user._id)) {
                             sellersData[user._id] = {
@@ -152,15 +158,14 @@ export default function ItemListPage() {
                                 username: user.username,
                                 full_name: user.full_name
                             };
-                            console.log('Mapped seller:', user._id, user.username, user.full_name);
+                            
                         }
                     });
-                    
-                    console.log('Final sellers mapping:', sellersData);
+
                 } else {
                     console.error('Users data is not in expected format:', data);
                 }
-                
+
                 setSellers(sellersData);
             } else {
                 const errorData = await response.text();
@@ -239,7 +244,7 @@ export default function ItemListPage() {
     };
 
     const formatPrice = (price: number, currency?: string) => {
-        
+
         const validCurrency = currency && currency.length === 3 ? currency : 'INR';
 
         try {
@@ -266,34 +271,34 @@ export default function ItemListPage() {
         if (seller) {
             return seller.full_name || seller.username || 'Unknown User';
         }
-        
+
         // If seller not found in our data, show seller_no as fallback
         if (sellerNo) {
             return `User #${sellerNo}`;
         }
-        
+
         // Last fallback - show partial seller ID
         return `User ${sellerId.slice(-6)}...`;
     };
 
     const getImageUrl = (imageName: string) => {
         if (!imageName) {
-          
+
             return '/placeholder.jpg';
         }
 
-        
-        const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGE_BASE_URL ;
 
-       
+        const imageBaseUrl = process.env.NEXT_PUBLIC_IMAGE_BASE_URL;
+
+
         if (imageName.startsWith('http')) {
-          
+
             return imageName;
         }
 
-   
+
         const fullUrl = `${imageBaseUrl}/${imageName}`;
-        
+
         return fullUrl;
     };
 
@@ -338,7 +343,7 @@ export default function ItemListPage() {
 
     const uniqueCategories = [...new Set(listings.map(listing => listing.category).filter(Boolean))];
 
-    if (loading) {
+    if (loading && listings.length === 0) {
         return (
             <div className="space-y-6">
                 <div>
@@ -510,7 +515,7 @@ export default function ItemListPage() {
                                                         {listing.status || 'Unknown'}
                                                     </Badge>
                                                 </div>
-                                                
+
                                                 <div className="mt-2 space-y-1">
                                                     <div className="flex items-center justify-between text-sm">
                                                         <span className="text-muted-foreground">Seller:</span>
@@ -728,9 +733,9 @@ export default function ItemListPage() {
                                                         onClick={() => handleViewItem(listing._id)}
                                                         disabled={navigatingToItemId === listing._id}
                                                     >
-                                                       
-                                                            <Eye className="h-4 w-4" />
-                                                       
+
+                                                        <Eye className="h-4 w-4" />
+
                                                     </Button>
 
                                                     {!listing.deleted && (

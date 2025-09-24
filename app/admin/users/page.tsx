@@ -84,6 +84,7 @@ interface User {
     join_date?: string;
     last_visit?: string;
     created_at: string;
+    createdAt?: string;
     updatedAt?: string;
 }
 
@@ -289,7 +290,9 @@ export default function UsersPage() {
 
         // Date range filter
         const dateMatches = dateRangeFilter === 'all' || (() => {
-            const userDate = new Date(user.created_at);
+            const baseDate = user.join_date || user.created_at || user.createdAt;
+            const userDate = baseDate ? new Date(baseDate) : null;
+            if (!userDate || isNaN(userDate.getTime())) return false;
             const now = new Date();
             const daysDiff = Math.floor((now.getTime() - userDate.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -680,7 +683,7 @@ export default function UsersPage() {
                                         <TableCell>
                                             <div className="flex items-center text-sm">
                                                 <Calendar className="mr-1 h-3 w-3" />
-                                                {formatDate(user.join_date || user.created_at)}
+                                                {formatDate(user.join_date || user.created_at || user.createdAt)}
                                             </div>
                                         </TableCell>
                                         <TableCell>

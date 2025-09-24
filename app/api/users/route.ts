@@ -38,10 +38,16 @@ export async function GET(request: NextRequest) {
         }
 
         // Otherwise, fetch all users with region filter
-        const users = await User.find(regionFilter, { user_password: 0 }).sort({ created_at: -1 });
+        const users = await User.find(regionFilter, { user_password: 0 }).sort({ created_at: -1 }).lean();
+
+        // Normalize join_date for frontend compatibility
+        const normalizedUsers = users.map((u: any) => ({
+            ...u,
+            join_date: u.join_date || u.created_at || u.createdAt || (u._id ? undefined : undefined),
+        }));
 
         return NextResponse.json({
-            users,
+            users: normalizedUsers,
             regionFilter: 'All Users' // Users are not filtered by region
         });
 

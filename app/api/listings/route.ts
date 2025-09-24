@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import dbConnect from '@/lib/db';
 import Listing from '@/lib/models/Listing';
+import mongoose from 'mongoose';
 import { verifyTokenAndGetUser, getRegionFilter } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
@@ -38,15 +39,25 @@ export async function GET(request: NextRequest) {
 
         // Search filter
         if (search) {
-            const searchFilter = {
-                $or: [
-                    { title: { $regex: search, $options: 'i' } },
-                    { description: { $regex: search, $options: 'i' } },
-                    { seller_no: { $regex: search, $options: 'i' } },
-                    { location_display_name: { $regex: search, $options: 'i' } }
-                ]
-            };
-            
+            const orClauses: any[] = [
+                { title: { $regex: search, $options: 'i' } },
+                { description: { $regex: search, $options: 'i' } },
+                { seller_no: { $regex: search, $options: 'i' } },
+                { location_display_name: { $regex: search, $options: 'i' } },
+                { category: { $regex: search, $options: 'i' } },
+                { subcategory: { $regex: search, $options: 'i' } },
+                { city: { $regex: search, $options: 'i' } },
+                { state: { $regex: search, $options: 'i' } },
+                { pincode: { $regex: search, $options: 'i' } }
+            ];
+
+            // Direct lookup by ObjectId if search looks like a valid id
+            if (mongoose.Types.ObjectId.isValid(search)) {
+                orClauses.push({ _id: new mongoose.Types.ObjectId(search) });
+            }
+
+            const searchFilter = { $or: orClauses };
+
             // Combine with existing query
             if (query.$or) {
                 query.$and = [

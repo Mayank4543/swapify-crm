@@ -34,7 +34,7 @@ export function AddCustomerDialog({ open, onOpenChange }: AddCustomerDialogProps
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     // Handle form submission here
-    console.log("Form submitted:", formData)
+    
     onOpenChange(false)
     // Reset form
     setFormData({
