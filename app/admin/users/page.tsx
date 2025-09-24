@@ -404,20 +404,20 @@ export default function UsersPage() {
                     <h1 className="text-3xl font-bold text-foreground">User Management</h1>
                     <p className="text-muted-foreground">Manage and view all your users</p>
                 </div>
-                <div className="flex items-center space-x-2">
-                    <Button variant="outline" onClick={() => setShowFilters(!showFilters)}>
+                <div className="flex flex-wrap items-stretch md:items-center gap-2 w-full md:w-auto">
+                    <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowFilters(!showFilters)}>
                         <Filter className="mr-2 h-4 w-4" />
                         Filters
                     </Button>
 
                     <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
                         <DialogTrigger asChild>
-                            <Button>
+                            <Button className="w-full sm:w-auto">
                                 <Plus className="mr-2 h-4 w-4" />
                                 Add User
                             </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="w-[95vw] sm:max-w-[600px] max-h-[85vh] overflow-y-auto">
                             <DialogHeader>
                                 <DialogTitle>Add New User</DialogTitle>
                                 <DialogDescription>
@@ -527,12 +527,12 @@ export default function UsersPage() {
 
             <Card>
                 <CardHeader>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <div>
                             <CardTitle>User List</CardTitle>
                             <CardDescription>A list of all users in your system</CardDescription>
                         </div>
-                        <div className="w-80">
+                        <div className="w-full md:w-80">
                             <Input
                                 placeholder="Search users..."
                                 value={searchTerm}
@@ -544,12 +544,12 @@ export default function UsersPage() {
                     {/* Filters Section */}
                     <Collapsible open={showFilters} onOpenChange={setShowFilters}>
                         <CollapsibleContent className="space-y-4 pt-4">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                                 {/* Segment Filter */}
                                 <div className="space-y-2">
                                     <Label>Segment</Label>
                                     <Select value={segmentFilter} onValueChange={setSegmentFilter}>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="w-full">
                                             <SelectValue placeholder="All Segments" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -567,7 +567,7 @@ export default function UsersPage() {
                                 <div className="space-y-2">
                                     <Label>Verification</Label>
                                     <Select value={verificationFilter} onValueChange={setVerificationFilter}>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="w-full">
                                             <SelectValue placeholder="All Users" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -582,7 +582,7 @@ export default function UsersPage() {
                                 <div className="space-y-2">
                                     <Label>Country</Label>
                                     <Select value={countryFilter} onValueChange={setCountryFilter}>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="w-full">
                                             <SelectValue placeholder="All Countries" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -600,7 +600,7 @@ export default function UsersPage() {
                                 <div className="space-y-2">
                                     <Label>Join Date</Label>
                                     <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
-                                        <SelectTrigger>
+                                        <SelectTrigger className="w-full">
                                             <SelectValue placeholder="All Time" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -634,98 +634,101 @@ export default function UsersPage() {
                     </Collapsible>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>User</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Segment</TableHead>
-                                <TableHead>Join Date</TableHead>
-                                <TableHead>Last Visit</TableHead>
-                                <TableHead>Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {currentUsers.length === 0 ? (
+                    {/* Table with horizontal scroll on all screens */}
+                    <div className="w-full overflow-x-auto">
+                        <Table>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                        {filteredUsers.length === 0 ? 'No users found' : 'No users on this page'}
-                                    </TableCell>
+                                    <TableHead>User</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Segment</TableHead>
+                                    <TableHead>Join Date</TableHead>
+                                    <TableHead>Last Visit</TableHead>
+                                    <TableHead>Actions</TableHead>
                                 </TableRow>
-                            ) : (
-                                currentUsers.map((user) => (
-                                    <TableRow key={user._id} className="group hover:bg-muted/50">
-                                        <TableCell>
-                                            <div className="flex items-center space-x-3">
-                                                <Avatar className="w-8 h-8">
-                                                    <AvatarImage
-                                                        src={getUserAvatar(user) || undefined}
-                                                        alt={getDisplayName(user)}
-                                                    />
-                                                    <AvatarFallback className="text-xs">
-                                                        {getUserInitials(user)}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div>
-                                                    <div className="font-medium">{getDisplayName(user)}</div>
-                                                    <div className="text-sm text-muted-foreground">{user.email || 'N/A'}</div>
+                            </TableHeader>
+                            <TableBody>
+                                {currentUsers.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                            {filteredUsers.length === 0 ? 'No users found' : 'No users on this page'}
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    currentUsers.map((user) => (
+                                        <TableRow key={user._id} className="group hover:bg-muted/50">
+                                            <TableCell>
+                                                <div className="flex items-center space-x-3">
+                                                    <Avatar className="w-8 h-8">
+                                                        <AvatarImage
+                                                            src={getUserAvatar(user) || undefined}
+                                                            alt={getDisplayName(user)}
+                                                        />
+                                                        <AvatarFallback className="text-xs">
+                                                            {getUserInitials(user)}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <div>
+                                                        <div className="font-medium">{getDisplayName(user)}</div>
+                                                        <div className="text-sm text-muted-foreground">{user.email || 'N/A'}</div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge className={getStatusColor(user.status || 'pending')}>
-                                                {user.status || 'pending'}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline">{user.segment || 'None'}</Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center text-sm">
-                                                <Calendar className="mr-1 h-3 w-3" />
-                                                {formatDate(user.join_date || user.created_at || user.createdAt)}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="text-sm text-muted-foreground">
-                                                {user.last_visit ? formatDate(user.last_visit) : 'Never'}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleViewUser(user)}
-                                                    className="h-8 w-8 p-0"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleEditUser(user)}
-                                                    className="h-8 w-8 p-0"
-                                                >
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                {isManager && (
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge className={getStatusColor(user.status || 'pending')}>
+                                                    {user.status || 'pending'}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline">{user.segment || 'None'}</Badge>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center text-sm">
+                                                    <Calendar className="mr-1 h-3 w-3" />
+                                                    {formatDate(user.join_date || user.created_at || user.createdAt)}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="text-sm text-muted-foreground">
+                                                    {user.last_visit ? formatDate(user.last_visit) : 'Never'}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"
-                                                        onClick={() => handleDeleteUser(user)}
-                                                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                                        onClick={() => handleViewUser(user)}
+                                                        className="h-8 w-8 p-0"
                                                     >
-                                                        <Trash2 className="h-4 w-4" />
+                                                        <Eye className="h-4 w-4" />
                                                     </Button>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleEditUser(user)}
+                                                        className="h-8 w-8 p-0"
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    {isManager && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleDeleteUser(user)}
+                                                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
 
                     {/* Pagination */}
                     {filteredUsers.length > 0 && totalPages > 1 && (

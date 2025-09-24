@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, Target, Mail, TrendingUp } from "lucide-react"
+import { Users, Package, Tag, TrendingUp, Target, Mail } from "lucide-react"
 
 interface User {
   _id: string;
@@ -12,9 +13,13 @@ interface User {
 export default function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
+  const [listingsCount, setListingsCount] = useState<number | null>(null);
+  const [offersCount, setOffersCount] = useState<number | null>(null);
 
   useEffect(() => {
     fetchUsers();
+    fetchListingsCount();
+    fetchOffersCount();
   }, []);
 
   const fetchUsers = async () => {
@@ -28,6 +33,30 @@ export default function AdminDashboard() {
       console.error('Failed to fetch users:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchListingsCount = async () => {
+    try {
+      const res = await fetch('/api/listings?page=1&limit=1');
+      if (res.ok) {
+        const data = await res.json();
+        setListingsCount(data?.pagination?.totalCount ?? 0);
+      }
+    } catch (e) {
+      console.error('Failed to fetch listings count:', e);
+    }
+  };
+
+  const fetchOffersCount = async () => {
+    try {
+      const res = await fetch('/api/admin/offers?page=1&limit=1');
+      if (res.ok) {
+        const data = await res.json();
+        setOffersCount(data?.pagination?.total ?? 0);
+      }
+    } catch (e) {
+      console.error('Failed to fetch offers count:', e);
     }
   };
 
@@ -45,17 +74,17 @@ export default function AdminDashboard() {
       color: "text-blue-600",
     },
     {
-      title: "Active Users",
-      value: loading ? "..." : activeUsers.toString(),
-      description: `${pendingUsers} pending approval`,
-      icon: Target,
+      title: "Total Listings",
+      value: listingsCount === null ? "..." : listingsCount.toString(),
+      description: loading ? "Loading..." : `${totalUsers} users in system`,
+      icon: Package,
       color: "text-green-600",
     },
     {
-      title: "Campaigns Running",
-      value: "12",
-      description: "3 launching soon",
-      icon: Mail,
+      title: "Total Offers",
+      value: offersCount === null ? "..." : offersCount.toString(),
+      description: loading ? "Loading..." : `${pendingUsers} users pending approval`,
+      icon: Tag,
       color: "text-purple-600",
     },
     {

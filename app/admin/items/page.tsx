@@ -104,7 +104,7 @@ export default function ItemListPage() {
             const response = await fetch(`/api/listings?${params}`);
             if (response.ok) {
                 const data = await response.json();
-               
+
 
                 setListings(data.listings);
                 setTotalPages(data.pagination.totalPages);
@@ -112,7 +112,7 @@ export default function ItemListPage() {
                 setHasNextPage(data.pagination.hasNextPage);
                 setHasPrevPage(data.pagination.hasPrevPage);
 
-               
+
                 await fetchSellers(data.listings);
             } else {
                 console.error('Failed to load listings:', response.status);
@@ -129,7 +129,7 @@ export default function ItemListPage() {
     const fetchSellers = async (listingsData: Listing[]) => {
         const sellerIds = [...new Set(listingsData.map(listing => listing.seller_id))];
 
-        
+
 
         if (sellerIds.length === 0) {
             setSellers({});
@@ -140,16 +140,16 @@ export default function ItemListPage() {
             setSellersLoading(true);
             // Fetch all sellers in one request
             const response = await fetch('/api/users');
-           
+
 
             if (response.ok) {
                 const data = await response.json();
-              
+
 
                 const sellersData: { [key: string]: Seller } = {};
 
                 if (data.users && Array.isArray(data.users)) {
-                    
+
 
                     data.users.forEach((user: any) => {
                         if (sellerIds.includes(user._id)) {
@@ -158,7 +158,7 @@ export default function ItemListPage() {
                                 username: user.username,
                                 full_name: user.full_name
                             };
-                            
+
                         }
                     });
 
@@ -480,130 +480,132 @@ export default function ItemListPage() {
                 </CardHeader>
                 <CardContent>
                     {/* Mobile view - Card layout */}
-                    <div className="block lg:hidden space-y-4">
-                        {listings.length === 0 ? (
-                            <div className="text-center py-8 text-muted-foreground">
-                                No listings found
-                            </div>
-                        ) : (
-                            listings.map((listing) => (
-                                <Card key={listing._id} className={listing.deleted ? "opacity-50" : ""}>
-                                    <CardContent className="p-4">
-                                        <div className="flex items-start space-x-3">
-                                            <Avatar className="h-16 w-16 rounded-md">
-                                                <AvatarImage
-                                                    src={getImageUrl(listing.cover_image)}
-                                                    alt={listing.title}
-                                                    className="object-cover"
-                                                    onError={handleImageError}
-                                                />
-                                                <AvatarFallback className="rounded-md">
-                                                    <Package className="h-8 w-8" />
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-start justify-between">
-                                                    <div className="min-w-0 flex-1">
-                                                        <h3 className="font-medium text-sm truncate" title={listing.title}>
-                                                            {listing.title}
-                                                        </h3>
-                                                        <p className="text-xs text-muted-foreground">
-                                                            ID: {listing._id.slice(-8)}
-                                                        </p>
-                                                    </div>
-                                                    <Badge className={`text-xs ${getStatusColor(listing.status)} ml-2`}>
-                                                        {listing.status || 'Unknown'}
-                                                    </Badge>
-                                                </div>
-
-                                                <div className="mt-2 space-y-1">
-                                                    <div className="flex items-center justify-between text-sm">
-                                                        <span className="text-muted-foreground">Seller:</span>
-                                                        <span className="font-medium">
-                                                            {sellersLoading ? "Loading..." : getSellerName(listing.seller_id, listing.seller_no)}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between text-sm">
-                                                        <span className="text-muted-foreground">Price:</span>
-                                                        <span className="font-medium">
-                                                            {listing.price > 0 ? formatPrice(listing.price, listing.currency) : 'Free'}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between text-sm">
-                                                        <span className="text-muted-foreground">Category:</span>
-                                                        <Badge variant="secondary" className="text-xs">
-                                                            {listing.category}
+                    <div className="block lg:hidden w-full overflow-x-auto">
+                        <div className="space-y-4 min-w-[320px]">
+                            {listings.length === 0 ? (
+                                <div className="text-center py-8 text-muted-foreground">
+                                    No listings found
+                                </div>
+                            ) : (
+                                listings.map((listing) => (
+                                    <Card key={listing._id} className={listing.deleted ? "opacity-50" : ""}>
+                                        <CardContent className="p-4">
+                                            <div className="flex items-start space-x-3">
+                                                <Avatar className="h-16 w-16 rounded-md">
+                                                    <AvatarImage
+                                                        src={getImageUrl(listing.cover_image)}
+                                                        alt={listing.title}
+                                                        className="object-cover"
+                                                        onError={handleImageError}
+                                                    />
+                                                    <AvatarFallback className="rounded-md">
+                                                        <Package className="h-8 w-8" />
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-start justify-between">
+                                                        <div className="min-w-0 flex-1">
+                                                            <h3 className="font-medium text-sm truncate" title={listing.title}>
+                                                                {listing.title}
+                                                            </h3>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                ID: {listing._id.slice(-8)}
+                                                            </p>
+                                                        </div>
+                                                        <Badge className={`text-xs ${getStatusColor(listing.status)} ml-2`}>
+                                                            {listing.status || 'Unknown'}
                                                         </Badge>
                                                     </div>
-                                                    <div className="flex items-center justify-between text-sm">
-                                                        <span className="text-muted-foreground">Location:</span>
-                                                        <span className="text-xs truncate max-w-32" title={listing.location_display_name}>
-                                                            {listing.location_display_name ||
-                                                                [listing.city, listing.state].filter(Boolean).join(', ') ||
-                                                                'Not specified'}
-                                                        </span>
+
+                                                    <div className="mt-2 space-y-1">
+                                                        <div className="flex items-center justify-between text-sm">
+                                                            <span className="text-muted-foreground">Seller:</span>
+                                                            <span className="font-medium">
+                                                                {sellersLoading ? "Loading..." : getSellerName(listing.seller_id, listing.seller_no)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-sm">
+                                                            <span className="text-muted-foreground">Price:</span>
+                                                            <span className="font-medium">
+                                                                {listing.price > 0 ? formatPrice(listing.price, listing.currency) : 'Free'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-sm">
+                                                            <span className="text-muted-foreground">Category:</span>
+                                                            <Badge variant="secondary" className="text-xs">
+                                                                {listing.category}
+                                                            </Badge>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-sm">
+                                                            <span className="text-muted-foreground">Location:</span>
+                                                            <span className="text-xs truncate max-w-32" title={listing.location_display_name}>
+                                                                {listing.location_display_name ||
+                                                                    [listing.city, listing.state].filter(Boolean).join(', ') ||
+                                                                    'Not specified'}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between text-sm">
+                                                            <span className="text-muted-foreground">Date:</span>
+                                                            <span className="text-xs">
+                                                                {formatDate(listing.created_at)}
+                                                            </span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-center justify-between text-sm">
-                                                        <span className="text-muted-foreground">Date:</span>
-                                                        <span className="text-xs">
-                                                            {formatDate(listing.created_at)}
-                                                        </span>
-                                                    </div>
-                                                </div>
 
-                                                <div className="mt-3 flex items-center space-x-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => handleViewItem(listing._id)}
-                                                        disabled={navigatingToItemId === listing._id}
-                                                        className="flex-1"
-                                                    >
-                                                        <Eye className="h-4 w-4 mr-1" />
-                                                        View
-                                                    </Button>
+                                                    <div className="mt-3 flex items-center space-x-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => handleViewItem(listing._id)}
+                                                            disabled={navigatingToItemId === listing._id}
+                                                            className="flex-1"
+                                                        >
+                                                            <Eye className="h-4 w-4 mr-1" />
+                                                            View
+                                                        </Button>
 
-                                                    {!listing.deleted && (
-                                                        <>
-                                                            <Select
-                                                                value={listing.status}
-                                                                onValueChange={(value) => handleStatusUpdate(listing._id, value)}
-                                                            >
-                                                                <SelectTrigger className="h-8 w-20 text-xs">
-                                                                    <SelectValue />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    <SelectItem value="pending_review">Pending</SelectItem>
-                                                                    <SelectItem value="active">Active</SelectItem>
-                                                                    <SelectItem value="paused">Paused</SelectItem>
-                                                                    <SelectItem value="sold">Sold</SelectItem>
-                                                                    <SelectItem value="expired">Expired</SelectItem>
-                                                                </SelectContent>
-                                                            </Select>
-
-                                                            {currentUser?.role === 'manager' && (
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="sm"
-                                                                    onClick={() => handleDeleteListing(listing._id)}
-                                                                    className="text-red-500 hover:text-red-700"
+                                                        {!listing.deleted && (
+                                                            <>
+                                                                <Select
+                                                                    value={listing.status}
+                                                                    onValueChange={(value) => handleStatusUpdate(listing._id, value)}
                                                                 >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
-                                                            )}
-                                                        </>
-                                                    )}
+                                                                    <SelectTrigger className="h-8 w-20 text-xs">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="pending_review">Pending</SelectItem>
+                                                                        <SelectItem value="active">Active</SelectItem>
+                                                                        <SelectItem value="paused">Paused</SelectItem>
+                                                                        <SelectItem value="sold">Sold</SelectItem>
+                                                                        <SelectItem value="expired">Expired</SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+
+                                                                {currentUser?.role === 'manager' && (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => handleDeleteListing(listing._id)}
+                                                                        className="text-red-500 hover:text-red-700"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ))
-                        )}
+                                        </CardContent>
+                                    </Card>
+                                ))
+                            )}
+                        </div>
                     </div>
 
-                    {/* Desktop view - Table layout */}
-                    <div className="hidden lg:block">
+                    {/* Desktop view - Table layout with horizontal scroll */}
+                    <div className="hidden lg:block w-full overflow-x-auto">
                         <Table>
                             <TableHeader>
                                 <TableRow>
